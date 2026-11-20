@@ -1,0 +1,8 @@
+{
+  "name": "MegaBazar",
+  "short_name": "MegaBazar",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f6fa",
+  "theme_color": "#172B50"
+}
