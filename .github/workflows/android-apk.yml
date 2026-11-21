@@ -16,21 +16,28 @@ jobs:
       - name: Descomprimir proyecto Android
         run: unzip -o MegaBazar_Android_proyecto_compilable.zip -d proyecto_android
 
-      - name: Convertir y aplicar icono de MegaBazar
+      - name: Forzar icono en AndroidManifest y recursos
         run: |
           if [ -f "image_1ffc2675.jpg" ]; then
             sudo apt-get update && sudo apt-get install -y imagemagick
             convert image_1ffc2675.jpg -resize 512x512 icono_real.png
             RES_DIR=$(find proyecto_android -type d -name "res" | head -n 1)
+            MANIFEST=$(find proyecto_android -name "AndroidManifest.xml" | head -n 1)
             if [ -n "$RES_DIR" ]; then
-              rm -rf "$RES_DIR"/mipmap-anydpi*
-              for dir in "$RES_DIR"/mipmap-*; do
-                if [ -d "$dir" ]; then
-                  cp icono_real.png "$dir/ic_launcher.png"
-                  cp icono_real.png "$dir/ic_launcher_round.png"
-                fi
+              rm -rf "$RES_DIR"/mipmap-*
+              mkdir -p "$RES_DIR/mipmap-mdpi" "$RES_DIR/mipmap-hdpi" "$RES_DIR/mipmap-xhdpi" "$RES_DIR/mipmap-xxhdpi" "$RES_DIR/mipmap-xxxhdpi" "$RES_DIR/drawable"
+              for dir in "$RES_DIR"/mipmap-* "$RES_DIR/drawable"; do
+                cp icono_real.png "$dir/ic_launcher.png"
+                cp icono_real.png "$dir/ic_launcher_round.png"
               done
-              echo "Icono PNG real aplicado correctamente"
+            fi
+            if [ -n "$MANIFEST" ]; then
+              sed -i 's/android:icon="[^"]*"/android:icon="@mipmap\/ic_launcher"/g' "$MANIFEST"
+              sed -i 's/android:roundIcon="[^"]*"/android:roundIcon="@mipmap\/ic_launcher_round"/g' "$MANIFEST"
+              if ! grep -q "android:icon=" "$MANIFEST"; then
+                sed -i 's/<application/<application android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher_round"/' "$MANIFEST"
+              fi
+              cat "$MANIFEST"
             fi
           fi
 
