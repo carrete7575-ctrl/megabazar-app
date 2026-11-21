@@ -16,20 +16,18 @@ jobs:
       - name: Descomprimir proyecto Android
         run: unzip -o MegaBazar_Android_proyecto_compilable.zip -d proyecto_android
 
-      - name: Aplicar icono de MegaBazar en todas las rutas
+      - name: Aplicar icono de MegaBazar junto al Manifest
         run: |
           if [ -f "image_1ffc2675.jpg" ]; then
             sudo apt-get update && sudo apt-get install -y imagemagick xmlstarlet
             convert image_1ffc2675.jpg -resize 512x512 megabazar_icon.png
-            for r in $(find proyecto_android -type d -name "res"); do
-              mkdir -p "$r/drawable"
-              cp megabazar_icon.png "$r/drawable/megabazar_icon.png"
-              echo "Icono copiado en: $r/drawable/megabazar_icon.png"
-            done
             for m in $(find proyecto_android -name "AndroidManifest.xml"); do
+              BASE_DIR=$(dirname "$m")
+              mkdir -p "$BASE_DIR/res/drawable"
+              cp megabazar_icon.png "$BASE_DIR/res/drawable/megabazar_icon.png"
               xmlstarlet ed -L -d "/manifest/application/@android:icon" -d "/manifest/application/@android:roundIcon" "$m"
               xmlstarlet ed -L -i "/manifest/application" -t attr -n "android:icon" -v "@drawable/megabazar_icon" "$m"
-              echo "Manifest actualizado: $m"
+              echo "Icono guardado en: $BASE_DIR/res/drawable/megabazar_icon.png"
             done
           fi
 
