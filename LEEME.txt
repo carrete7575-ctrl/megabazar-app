@@ -1,0 +1,1 @@
+MegaBazar: prototipo visual de demostración. No es un APK ni una tienda operativa. No contiene servidor, cuentas reales, pagos, chat ni pedidos reales. Para convertirlo en aplicación Android instalable habrá que publicarlo en una dirección HTTPS y empaquetarlo con una herramienta compatible.
