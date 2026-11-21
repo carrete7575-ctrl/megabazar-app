@@ -16,10 +16,10 @@ jobs:
       - name: Descomprimir proyecto Android
         run: unzip -o MegaBazar_Android_proyecto_compilable.zip -d proyecto_android
 
-      - name: Aplicar icono de MegaBazar
+      - name: Aplicar icono de MegaBazar con XMLStarlet
         run: |
           if [ -f "image_1ffc2675.jpg" ]; then
-            sudo apt-get update && sudo apt-get install -y imagemagick
+            sudo apt-get update && sudo apt-get install -y imagemagick xmlstarlet
             convert image_1ffc2675.jpg -resize 512x512 megabazar_icon.png
             RES_DIR=$(find proyecto_android -type d -name "res" | head -n 1)
             MANIFEST=$(find proyecto_android -name "AndroidManifest.xml" | head -n 1)
@@ -28,9 +28,8 @@ jobs:
               cp megabazar_icon.png "$RES_DIR/drawable/megabazar_icon.png"
             fi
             if [ -n "$MANIFEST" ]; then
-              sed -i 's/android:icon="[^"]*"//g' "$MANIFEST"
-              sed -i 's/android:roundIcon="[^"]*"//g' "$MANIFEST"
-              sed -i 's/<application/<application android:icon="@drawable\/megabazar_icon"/' "$MANIFEST"
+              xmlstarlet ed -L -d "/manifest/application/@android:icon" -d "/manifest/application/@android:roundIcon" "$MANIFEST"
+              xmlstarlet ed -L -i "/manifest/application" -t attr -n "android:icon" -v "@drawable/megabazar_icon" "$MANIFEST"
             fi
           fi
 
