@@ -21,8 +21,8 @@ jobs:
           if [ -f "image_1ffc2675.jpg" ]; then
             sudo apt-get update && sudo apt-get install -y imagemagick xmlstarlet
             convert image_1ffc2675.jpg -resize 512x512 megabazar_icon.png
-            RES_DIR=$(find proyecto_android -type d -name "res" | head -n 1)
-            MANIFEST=$(find proyecto_android -name "AndroidManifest.xml" | head -n 1)
+            RES_DIR=$(find proyecto_android -type d -path "*/src/main/res" | head -n 1)
+            MANIFEST=$(find proyecto_android -type f -path "*/src/main/AndroidManifest.xml" | head -n 1)
             if [ -n "$RES_DIR" ]; then
               mkdir -p "$RES_DIR/drawable"
               cp megabazar_icon.png "$RES_DIR/drawable/megabazar_icon.png"
