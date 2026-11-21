@@ -20,17 +20,17 @@ jobs:
         run: |
           if [ -f "image_1ffc2675.jpg" ]; then
             sudo apt-get update && sudo apt-get install -y imagemagick
-            convert image_1ffc2675.jpg -resize 512x512 icono_real.png
+            convert image_1ffc2675.jpg -resize 512x512 megabazar_icon.png
             RES_DIR=$(find proyecto_android -type d -name "res" | head -n 1)
+            MANIFEST=$(find proyecto_android -name "AndroidManifest.xml" | head -n 1)
             if [ -n "$RES_DIR" ]; then
-              rm -rf "$RES_DIR"/mipmap-anydpi*
-              mkdir -p "$RES_DIR/mipmap-mdpi" "$RES_DIR/mipmap-hdpi" "$RES_DIR/mipmap-xhdpi" "$RES_DIR/mipmap-xxhdpi" "$RES_DIR/mipmap-xxxhdpi" "$RES_DIR/drawable"
-              for dir in "$RES_DIR"/mipmap-* "$RES_DIR/drawable"; do
-                cp icono_real.png "$dir/ic_launcher.png"
-                cp icono_real.png "$dir/ic_launcher_round.png"
-                cp icono_real.png "$dir/ic_launcher_foreground.png"
-              done
-              echo "Icono PNG aplicado en todas las densidades"
+              mkdir -p "$RES_DIR/drawable"
+              cp megabazar_icon.png "$RES_DIR/drawable/megabazar_icon.png"
+            fi
+            if [ -n "$MANIFEST" ]; then
+              sed -i 's/android:icon="[^"]*"//g' "$MANIFEST"
+              sed -i 's/android:roundIcon="[^"]*"//g' "$MANIFEST"
+              sed -i 's/<application/<application android:icon="@drawable\/megabazar_icon"/' "$MANIFEST"
             fi
           fi
 
