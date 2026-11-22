@@ -15,6 +15,8 @@ jobs:
 
       - name: Crear app Android conectada a MegaBazar Web
         run: |
+          rm -f build.gradle settings.gradle gradle.properties
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
           mkdir -p app/src/main/java/com/megabazar/app
           mkdir -p app/src/main/res/drawable
 
@@ -97,11 +99,6 @@ jobs:
                   w.setWebViewClient(new WebViewClient());
                   w.loadUrl("https://github.io");
                   setContentView(w);
-              }
-              @Override
-              public void onBackPressed() {
-                  WebView w = (WebView) findViewById(android.R.id.content).getRootView().findViewWithTag("web");
-                  super.onBackPressed();
               }
           }
           EOF
