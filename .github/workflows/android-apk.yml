@@ -16,16 +16,59 @@ jobs:
       - name: Descomprimir proyecto Android
         run: unzip -o MegaBazar_Android_proyecto_compilable.zip -d proyecto_android
 
-      - name: Inspeccionar y actualizar HTML dentro del proyecto Android
+      - name: Conectar App Android a la Web real con Firebase
         run: |
-          echo "=== Archivos en proyecto_android ==="
-          find proyecto_android -maxdepth 5 -not -path '*/.*'
-          if [ -f "index.html" ]; then
-            for target in $(find proyecto_android -path "*/assets/*" -name "*.html"); do
-              cp index.html "$target"
-              echo "HTML actualizado en: $target"
-            done
-          fi
+          for m in $(find proyecto_android -name "AndroidManifest.xml"); do
+            if ! grep -q "android.permission.INTERNET" "$m"; then
+              sed -i 's/<manifest[^>]*>/&\n    <uses-permission android:name="android.permission.INTERNET" \/>/' "$m"
+            fi
+          done
+          for act in $(find proyecto_android -name "MainActivity.java" -o -name "MainActivity.kt"); do
+            PKG=$(grep -E "^package " "$act" | head -n 1 | sed 's/;//g')
+            if [[ "$act" == *.java ]]; then
+              cat << EOF > "$act"
+          $PKG;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WebView w = new WebView(this);
+                  WebSettings s = w.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  w.setWebViewClient(new WebViewClient());
+                  w.loadUrl("https://github.io");
+                  setContentView(w);
+              }
+          }
+          EOF
+            else
+              cat << EOF > "$act"
+          $PKG
+          import android.app.Activity
+          import android.os.Bundle
+          import android.webkit.WebView
+          import android.webkit.WebViewClient
+          class MainActivity : Activity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  val w = WebView(this)
+                  w.settings.javaScriptEnabled = true
+                  w.settings.domStorageEnabled = true
+                  w.webViewClient = WebViewClient()
+                  w.loadUrl("https://github.io")
+                  setContentView(w)
+              }
+          }
+          EOF
+            fi
+            echo "MainActivity conectada en: $act"
+          done
 
       - name: Aplicar icono de MegaBazar junto al Manifest
         run: |
