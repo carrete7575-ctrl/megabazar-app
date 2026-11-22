@@ -16,12 +16,14 @@ jobs:
       - name: Descomprimir proyecto Android
         run: unzip -o MegaBazar_Android_proyecto_compilable.zip -d proyecto_android
 
-      - name: Actualizar index.html dentro del proyecto Android
+      - name: Inspeccionar y actualizar HTML dentro del proyecto Android
         run: |
+          echo "=== Archivos en proyecto_android ==="
+          find proyecto_android -maxdepth 5 -not -path '*/.*'
           if [ -f "index.html" ]; then
-            for target in $(find proyecto_android -name "index.html"); do
+            for target in $(find proyecto_android -path "*/assets/*" -name "*.html"); do
               cp index.html "$target"
-              echo "index.html actualizado en: $target"
+              echo "HTML actualizado en: $target"
             done
           fi
 
@@ -58,10 +60,8 @@ jobs:
             ./gradlew assembleDebug
           fi
 
-      
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: MegaBazar-APK
-          path: "proyecto_android/**/build/outputs/apk/debug/*.apk"
-          if-no-files-found: error
+          path: "**/app-debug.apk"
