@@ -1,20 +1,200 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#172B50"><link rel="manifest" href="manifest.webmanifest"><title>MegaBazar</title>
-<style>
-body{margin:0;font:16px Arial,sans-serif;background:#f4f6fa;color:#18243a}header{background:#172B50;color:white;padding:18px}h1{margin:0}small{color:#dce7fa}.search{width:100%;box-sizing:border-box;padding:13px;border:0;border-radius:10px;margin-top:14px;font-size:16px}main{padding:16px;padding-bottom:75px}.hero{background:#e8eef8;padding:18px;border-radius:16px}.chips{display:flex;gap:8px;overflow:auto;margin:12px 0}.chip,button{border:0;border-radius:10px;padding:10px 13px;background:#172B50;color:white}.chip{background:white;color:#172B50;border:1px solid #ccd4e2;white-space:nowrap}.chip.active{background:#172B50;color:white}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{background:white;padding:12px;border-radius:14px}.emoji{background:#edf2fa;border-radius:10px;text-align:center;font-size:42px;padding:20px}.price{font-size:20px;font-weight:bold;color:#172B50}.card button{width:100%;margin-top:8px}.nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:10px}.nav button{background:white;color:#172B50}.hidden{display:none}.panel{background:white;border-radius:14px;padding:16px;margin-top:14px}
-</style></head><body>
-<header><h1>🛍️ MegaBazar</h1><small>Compra. Vende. Descubre.</small><input id="q" class="search" placeholder="¿Qué estás buscando?"></header>
-<main><section id="home"><div class="hero"><h2>¡Bienvenido a MegaBazar!</h2><p>Compra y vende productos nuevos y de segunda mano en toda España.</p><b>Envío gratuito incluido en el precio</b></div><h3>Categorías</h3><div id="cats" class="chips"></div><h3>Productos de ejemplo</h3><div id="products" class="grid"></div></section>
-<section id="cart" class="hidden"><h2>Mi carrito</h2><div class="panel" id="items">Tu carrito está vacío.</div></section>
-<section id="sell" class="hidden"><h2>Vender en MegaBazar</h2><div class="panel">Panel de demostración. La publicación y gestión real de productos se conectará en una fase posterior.<p><b>Comisión prevista: 10 %</b></p></div></section>
-<section id="account" class="hidden"><h2>Mi cuenta</h2><div class="panel"><p>Registro de demostración, todavía no conectado.</p><input class="search" placeholder="Correo electrónico"><input class="search" type="password" placeholder="Contraseña"></div></section></main>
-<div class="nav"><button onclick="show('home')">Inicio</button><button onclick="show('sell')">Vender</button><button onclick="show('cart')">Carrito</button><button onclick="show('account')">Cuenta</button></div>
-<script>
-const data=[['🎧','Auriculares inalámbricos','Electrónica',29.99],['⌚','Reloj moderno','Moda',39.99],['💡','Lámpara de diseño','Hogar',24.99],['🎒','Mochila deportiva','Deporte',34.99],['🎮','Videojuego','Juguetes',27.5],['🚲','Accesorio de bicicleta','Motor',18.9]];
-let cat='Todos',cart=[];const cats=['Todos','Electrónica','Moda','Hogar','Deporte','Juguetes','Motor'];
-function drawCats(){document.getElementById('cats').innerHTML=cats.map(c=>`<button class="chip ${c===cat?'active':''}" onclick="cat='${c}';drawCats();drawProducts()">${c}</button>`).join('')}
-function drawProducts(){let q=document.getElementById('q').value.toLowerCase();let a=data.filter(p=>(cat==='Todos'||p[2]===cat)&&p[1].toLowerCase().includes(q));document.getElementById('products').innerHTML=a.map(p=>`<div class="card"><div class="emoji">${p[0]}</div><h4>${p[1]}</h4><small>${p[2]} · Ejemplo</small><p class="price">${p[3].toFixed(2).replace('.',',')} €</p><button onclick="add('${p[1]}',${p[3]})">Añadir al carrito</button></div>`).join('')||'No hay resultados'}
-function add(n,p){cart.push({n,p});document.getElementById('items').innerHTML=cart.map(x=>`<p>${x.n} — ${x.p.toFixed(2)} €</p>`).join('')+`<hr><b>Total: ${cart.reduce((s,x)=>s+x.p,0).toFixed(2)} €</b><p>Carrito de demostración: no se realizan pagos.</p>`}
-function show(id){document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')}
-document.getElementById('q').addEventListener('input',drawProducts);drawCats();drawProducts();
-</script></body></html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#172B50">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>MegaBazar</title>
+  <style>
+    body{margin:0;font:16px Arial,sans-serif;background:#f4f6fa;color:#18243a}
+    header{background:#172B50;color:white;padding:18px}
+    h1{margin:0}
+    small{color:#dce7fa}
+    .search{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d5deed;border-radius:10px;margin-top:10px;font-size:16px}
+    main{padding:16px;padding-bottom:80px}
+    .hero{background:#e8eef8;padding:18px;border-radius:16px}
+    .chips{display:flex;gap:8px;overflow:auto;margin:12px 0}
+    .chip,button{border:0;border-radius:10px;padding:10px 13px;background:#172B50;color:white;cursor:pointer;font-size:15px}
+    .chip{background:white;color:#172B50;border:1px solid #ccd4e2;white-space:nowrap}
+    .chip.active{background:#172B50;color:white}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .card{background:white;padding:12px;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
+    .emoji{background:#edf2fa;border-radius:10px;text-align:center;font-size:42px;padding:18px;overflow:hidden}
+    .emoji img{width:100%;height:90px;object-fit:cover;border-radius:8px}
+    .price{font-size:20px;font-weight:bold;color:#172B50}
+    .card button{width:100%;margin-top:8px}
+    .btn-del{background:#c62828;margin-top:6px}
+    .btn-sec{background:#4a608a}
+    .nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:10px;border-top:1px solid #e1e6f0}
+    .nav button{background:white;color:#172B50;font-weight:bold}
+    .hidden{display:none}
+    .panel{background:white;border-radius:14px;padding:16px;margin-top:14px}
+    .badge-admin{background:#1b5e20;color:white;padding:4px 10px;border-radius:20px;font-size:12px;display:inline-block;margin-bottom:8px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛍️ MegaBazar</h1>
+    <small>Compra. Vende. Descubre.</small>
+    <input id="q" class="search" placeholder="¿Qué estás buscando?">
+  </header>
+
+  <main>
+    <section id="home">
+      <div class="hero">
+        <h2>¡Bienvenido a MegaBazar!</h2>
+        <p>Compra y vende productos nuevos y de segunda mano en toda España.</p>
+        <b>Envío gratuito incluido en el precio</b>
+      </div>
+      <h3>Categorías</h3>
+      <div id="cats" class="chips"></div>
+      <h3>Productos disponibles</h3>
+      <div id="products" class="grid"></div>
+    </section>
+
+    <section id="cart" class="hidden">
+      <h2>Mi carrito</h2>
+      <div class="panel" id="items">Tu carrito está vacío.</div>
+    </section>
+
+    <section id="sell" class="hidden">
+      <h2>Panel de Administración y Ventas</h2>
+      <div id="sell-guest" class="panel">
+        <p>Inicia sesión en <b>Cuenta</b> con tu correo de administrador para publicar y gestionar productos en la tienda.</p>
+        <button onclick="show('account')">Ir a iniciar sesión</button>
+      </div>
+      <div id="sell-admin" class="panel hidden">
+        <span class="badge-admin">👑 MODO ADMINISTRADOR ACTIVO</span>
+        <h3>Publicar nuevo producto</h3>
+        <input id="p-title" class="search" placeholder="Nombre del producto (ej: Reloj inteligente)">
+        <select id="p-cat" class="search">
+          <option value="Electrónica">Electrónica</option>
+          <option value="Moda">Moda</option>
+          <option value="Hogar">Hogar</option>
+          <option value="Deporte">Deporte</option>
+          <option value="Juguetes">Juguetes</option>
+          <option value="Motor">Motor</option>
+        </select>
+        <input id="p-price" class="search" type="number" step="0.01" placeholder="Precio en € (ej: 29.99)">
+        <input id="p-icon" class="search" placeholder="Emoji (ej: 📱) o enlace https:// de foto">
+        <button style="width:100%;margin-top:12px" onclick="addProduct()">Publicar en MegaBazar</button>
+        <p style="font-size:13px;color:#555;margin-top:12px"><b>Comisión prevista de plataforma: 10 %</b></p>
+      </div>
+    </section>
+
+    <section id="account" class="hidden">
+      <h2>Mi cuenta</h2>
+      <div id="auth-box" class="panel">
+        <p>Inicia sesión o crea tu cuenta (usa <b>carrete7575@gmail.com</b> para entrar como Administrador).</p>
+        <input id="email" class="search" type="email" placeholder="Correo electrónico">
+        <input id="pass" class="search" type="password" placeholder="Contraseña (mínimo 6 caracteres)">
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button style="flex:1" onclick="loginUser()">Entrar</button>
+          <button style="flex:1" class="btn-sec" onclick="registerUser()">Crear cuenta</button>
+        </div>
+        <p id="auth-msg" style="color:#c62828;font-size:14px"></p>
+      </div>
+      <div id="profile-box" class="panel hidden">
+        <div id="admin-tag" class="badge-admin hidden">👑 ADMINISTRADOR PRINCIPAL</div>
+        <p>Sesión iniciada como: <b id="user-email"></b></p>
+        <button id="btn-go-admin" class="hidden" style="width:100%;margin-bottom:8px" onclick="show('sell')">⚙️ Gestionar productos</button>
+        <button class="btn-del" style="width:100%" onclick="logoutUser()">Cerrar sesión</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="nav">
+    <button onclick="show('home')">Inicio</button>
+    <button onclick="show('sell')">Vender</button>
+    <button onclick="show('cart')">Carrito</button>
+    <button onclick="show('account')">Cuenta</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://gstatic.com";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://gstatic.com";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://gstatic.com";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA2T8U2w_rR6mX5kL9nQ4vP7cZ1jB3dE8fG",
+      authDomain: "://firebaseapp.com",
+      projectId: "megabazar-bca1e",
+      storageBucket: "megabazar-bca1e.firebasestorage.app",
+      messagingSenderId: "842109467351",
+      appId: "1:842109467351:web:7b9c4e2f1a8d603e5c4a1b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const ADMIN_EMAIL = "carrete7575@gmail.com";
+
+    const defaultData = [
+      { id: 'd1', icon: '🎧', title: 'Auriculares inalámbricos', cat: 'Electrónica', price: 29.99, demo: true },
+      { id: 'd2', icon: '⌚', title: 'Reloj moderno', cat: 'Moda', price: 39.99, demo: true },
+      { id: 'd3', icon: '💡', title: 'Lámpara de diseño', cat: 'Hogar', price: 24.99, demo: true },
+      { id: 'd4', icon: '🎒', title: 'Mochila deportiva', cat: 'Deporte', price: 34.99, demo: true },
+      { id: 'd5', icon: '🎮', title: 'Videojuego', cat: 'Juguetes', price: 27.50, demo: true },
+      { id: 'd6', icon: '🚲', title: 'Accesorio de bicicleta', cat: 'Motor', price: 18.90, demo: true }
+    ];
+
+    let liveProducts = [];
+    let cat = 'Todos';
+    let cart = [];
+    let isAdmin = false;
+    const cats = ['Todos', 'Electrónica', 'Moda', 'Hogar', 'Deporte', 'Juguetes', 'Motor'];
+
+    window.setCat = (c) => { cat = c; drawCats(); drawProducts(); };
+
+    function drawCats() {
+      document.getElementById('cats').innerHTML = cats.map(c =>
+        `<button class="chip ${c === cat ? 'active' : ''}" onclick="setCat('${c}')">${c}</button>`
+      ).join('');
+    }
+
+    function drawProducts() {
+      const q = document.getElementById('q').value.toLowerCase();
+      const all = [...liveProducts, ...defaultData];
+      const filtered = all.filter(p =>
+        (cat === 'Todos' || p.cat === cat) && p.title.toLowerCase().includes(q)
+      );
+      document.getElementById('products').innerHTML = filtered.map(p => {
+        const visual = p.icon.startsWith('http') ? `<img src="${p.icon}" alt="${p.title}">` : p.icon;
+        const delBtn = (isAdmin && !p.demo) ? `<button class="btn-del" onclick="removeProduct('${p.id}')">🗑️ Borrar</button>` : '';
+        return `<div class="card">
+          <div class="emoji">${visual}</div>
+          <h4>${p.title}</h4>
+          <small>${p.cat}${p.demo ? ' · Ejemplo' : ''}</small>
+          <p class="price">${Number(p.price).toFixed(2).replace('.', ',')} €</p>
+          <button onclick="addCart('${p.title.replace(/'/g, "")}', ${p.price})">Añadir al carrito</button>
+          ${delBtn}
+        </div>`;
+      }).join('') || 'No hay resultados';
+    }
+
+    window.addCart = (n, p) => {
+      cart.push({ n, p: Number(p) });
+      document.getElementById('items').innerHTML = cart.map(x =>
+        `<p>${x.n} - ${x.p.toFixed(2)} €</p>`
+      ).join('') + `<hr><b>Total: ${cart.reduce((s, x) => s + x.p, 0).toFixed(2)} €</b><p style="font-size:13px;color:#555">Pedido listo para confirmar con el vendedor.</p>`;
+      alert('Añadido al carrito');
+    };
+
+    window.show = (id) => {
+      document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    };
+
+    onSnapshot(collection(db, "productos"), (snap) => {
+      liveProducts = snap.docs.map(d => ({ id: d.id, ...d.data(), demo: false }));
+      drawProducts();
+    });
+
+    window.addProduct = async () => {
+      if (!isAdmin) return alert('Solo el administrador puede publicar.');
+      const title = document.getElementById('p-title').value.trim();
+      const catVal = document.getElementById('p-cat').value;
+      const price = parseFloat(document.getElementById('p-price').value);
+      const icon = document.getElementById('p-icon').value.trim() || '📦';
+      if (!title || isNaN(price)) return alert('Escribe al menos el nombre y el precio.');
