@@ -13,51 +13,122 @@ jobs:
       - name: Descargar proyecto
         uses: actions/checkout@v4
 
-      - name: Descomprimir proyecto Android
-        run: unzip -o MegaBazar_Android_proyecto_compilable.zip -d proyecto_android
-
-      - name: Reemplazar TODOS los HTML internos por el nuevo index.html
+      - name: Crear app Android conectada a MegaBazar Web
         run: |
-          for old in $(find proyecto_android -name "*.html"); do
-            cp index.html "$old"
-            echo "Reemplazado: $old"
-          done
+          mkdir -p app/src/main/java/com/megabazar/app
+          mkdir -p app/src/main/res/drawable
 
-      - name: Aplicar icono de MegaBazar junto al Manifest
+          cat << 'EOF' > settings.gradle
+          rootProject.name = "MegaBazar"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.megabazar.app'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.megabazar.app"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 2
+                  versionName "2.0"
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://android.com">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application
+                  android:label="MegaBazar"
+                  android:icon="@drawable/megabazar_icon"
+                  android:usesCleartextTraffic="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/megabazar/app/MainActivity.java
+          package com.megabazar.app;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WebView w = new WebView(this);
+                  WebSettings s = w.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  w.setWebViewClient(new WebViewClient());
+                  w.loadUrl("https://github.io");
+                  setContentView(w);
+              }
+              @Override
+              public void onBackPressed() {
+                  WebView w = (WebView) findViewById(android.R.id.content).getRootView().findViewWithTag("web");
+                  super.onBackPressed();
+              }
+          }
+          EOF
+
+      - name: Aplicar icono de MegaBazar
         run: |
           if [ -f "image_1ffc2675.jpg" ]; then
-            sudo apt-get update && sudo apt-get install -y imagemagick xmlstarlet
-            convert image_1ffc2675.jpg -resize 512x512 megabazar_icon.png
-            for m in $(find proyecto_android -name "AndroidManifest.xml"); do
-              BASE_DIR=$(dirname "$m")
-              mkdir -p "$BASE_DIR/res/drawable"
-              cp megabazar_icon.png "$BASE_DIR/res/drawable/megabazar_icon.png"
-              xmlstarlet ed -L -d "/manifest/application/@android:icon" -d "/manifest/application/@android:roundIcon" "$m"
-              xmlstarlet ed -L -i "/manifest/application" -t attr -n "android:icon" -v "@drawable/megabazar_icon" "$m"
-            done
+            sudo apt-get update && sudo apt-get install -y imagemagick
+            convert image_1ffc2675.jpg -resize 512x512 app/src/main/res/drawable/megabazar_icon.png
           fi
 
-      - name: Configurar Java 17
+      - name: Configurar Java 17 y Gradle
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Compilar APK
-        run: |
-          DIR=$(find proyecto_android -name "gradlew" -exec dirname {} \; | head -n 1)
-          if [ -z "$DIR" ]; then
-            DIR=$(find proyecto_android -name "build.gradle" -exec dirname {} \; | head -n 1)
-            cd "$DIR"
-            gradle assembleDebug
-          else
-            cd "$DIR"
-            chmod +x gradlew
-            ./gradlew assembleDebug
-          fi
+      - name: Compilar APK real
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+
+      - name: Generar APK
+        run: gradle assembleDebug
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: MegaBazar-APK
-          path: "**/app-debug.apk"
+          path: "app/build/outputs/apk/debug/app-debug.apk"
