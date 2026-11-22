@@ -1,20 +1,63 @@
-<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#172B50"><link rel="manifest" href="manifest.webmanifest"><title>MegaBazar</title>
-<style>
-body{margin:0;font:16px Arial,sans-serif;background:#f4f6fa;color:#18243a}header{background:#172B50;color:white;padding:18px}h1{margin:0}small{color:#dce7fa}.search{width:100%;box-sizing:border-box;padding:13px;border:0;border-radius:10px;margin-top:14px;font-size:16px}main{padding:16px;padding-bottom:75px}.hero{background:#e8eef8;padding:18px;border-radius:16px}.chips{display:flex;gap:8px;overflow:auto;margin:12px 0}.chip,button{border:0;border-radius:10px;padding:10px 13px;background:#172B50;color:white}.chip{background:white;color:#172B50;border:1px solid #ccd4e2;white-space:nowrap}.chip.active{background:#172B50;color:white}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{background:white;padding:12px;border-radius:14px}.emoji{background:#edf2fa;border-radius:10px;text-align:center;font-size:42px;padding:20px}.price{font-size:20px;font-weight:bold;color:#172B50}.card button{width:100%;margin-top:8px}.nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:10px}.nav button{background:white;color:#172B50}.hidden{display:none}.panel{background:white;border-radius:14px;padding:16px;margin-top:14px}
-</style></head><body>
-<header><h1>🛍️ MegaBazar</h1><small>Compra. Vende. Descubre.</small><input id="q" class="search" placeholder="¿Qué estás buscando?"></header>
-<main><section id="home"><div class="hero"><h2>¡Bienvenido a MegaBazar!</h2><p>Compra y vende productos nuevos y de segunda mano en toda España.</p><b>Envío gratuito incluido en el precio</b></div><h3>Categorías</h3><div id="cats" class="chips"></div><h3>Productos de ejemplo</h3><div id="products" class="grid"></div></section>
-<section id="cart" class="hidden"><h2>Mi carrito</h2><div class="panel" id="items">Tu carrito está vacío.</div></section>
-<section id="sell" class="hidden"><h2>Vender en MegaBazar</h2><div class="panel">Panel de demostración. La publicación y gestión real de productos se conectará en una fase posterior.<p><b>Comisión prevista: 10 %</b></p></div></section>
-<section id="account" class="hidden"><h2>Mi cuenta</h2><div class="panel"><p>Registro de demostración, todavía no conectado.</p><input class="search" placeholder="Correo electrónico"><input class="search" type="password" placeholder="Contraseña"></div></section></main>
-<div class="nav"><button onclick="show('home')">Inicio</button><button onclick="show('sell')">Vender</button><button onclick="show('cart')">Carrito</button><button onclick="show('account')">Cuenta</button></div>
-<script>
-const data=[['🎧','Auriculares inalámbricos','Electrónica',29.99],['⌚','Reloj moderno','Moda',39.99],['💡','Lámpara de diseño','Hogar',24.99],['🎒','Mochila deportiva','Deporte',34.99],['🎮','Videojuego','Juguetes',27.5],['🚲','Accesorio de bicicleta','Motor',18.9]];
-let cat='Todos',cart=[];const cats=['Todos','Electrónica','Moda','Hogar','Deporte','Juguetes','Motor'];
-function drawCats(){document.getElementById('cats').innerHTML=cats.map(c=>`<button class="chip ${c===cat?'active':''}" onclick="cat='${c}';drawCats();drawProducts()">${c}</button>`).join('')}
-function drawProducts(){let q=document.getElementById('q').value.toLowerCase();let a=data.filter(p=>(cat==='Todos'||p[2]===cat)&&p[1].toLowerCase().includes(q));document.getElementById('products').innerHTML=a.map(p=>`<div class="card"><div class="emoji">${p[0]}</div><h4>${p[1]}</h4><small>${p[2]} · Ejemplo</small><p class="price">${p[3].toFixed(2).replace('.',',')} €</p><button onclick="add('${p[1]}',${p[3]})">Añadir al carrito</button></div>`).join('')||'No hay resultados'}
-function add(n,p){cart.push({n,p});document.getElementById('items').innerHTML=cart.map(x=>`<p>${x.n} — ${x.p.toFixed(2)} €</p>`).join('')+`<hr><b>Total: ${cart.reduce((s,x)=>s+x.p,0).toFixed(2)} €</b><p>Carrito de demostración: no se realizan pagos.</p>`}
-function show(id){document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')}
-document.getElementById('q').addEventListener('input',drawProducts);drawCats();drawProducts();
-</script></body></html>
+name: Build MegaBazar APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+
+      - name: Descomprimir proyecto Android
+        run: unzip -o MegaBazar_Android_proyecto_compilable.zip -d proyecto_android
+
+      - name: Reemplazar TODOS los HTML internos por el nuevo index.html
+        run: |
+          for old in $(find proyecto_android -name "*.html"); do
+            cp index.html "$old"
+            echo "Reemplazado: $old"
+          done
+
+      - name: Aplicar icono de MegaBazar junto al Manifest
+        run: |
+          if [ -f "image_1ffc2675.jpg" ]; then
+            sudo apt-get update && sudo apt-get install -y imagemagick xmlstarlet
+            convert image_1ffc2675.jpg -resize 512x512 megabazar_icon.png
+            for m in $(find proyecto_android -name "AndroidManifest.xml"); do
+              BASE_DIR=$(dirname "$m")
+              mkdir -p "$BASE_DIR/res/drawable"
+              cp megabazar_icon.png "$BASE_DIR/res/drawable/megabazar_icon.png"
+              xmlstarlet ed -L -d "/manifest/application/@android:icon" -d "/manifest/application/@android:roundIcon" "$m"
+              xmlstarlet ed -L -i "/manifest/application" -t attr -n "android:icon" -v "@drawable/megabazar_icon" "$m"
+            done
+          fi
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Compilar APK
+        run: |
+          DIR=$(find proyecto_android -name "gradlew" -exec dirname {} \; | head -n 1)
+          if [ -z "$DIR" ]; then
+            DIR=$(find proyecto_android -name "build.gradle" -exec dirname {} \; | head -n 1)
+            cd "$DIR"
+            gradle assembleDebug
+          else
+            cd "$DIR"
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          fi
+
+      - name: Guardar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MegaBazar-APK
+          path: "**/app-debug.apk"
