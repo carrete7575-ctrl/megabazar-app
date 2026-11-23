@@ -117,12 +117,12 @@
     import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://gstatic.com";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyA2T8U2w_rR6mX5kL9nQ4vP7cZ1jB3dE8fG",
-      authDomain: "://firebaseapp.com",
-      projectId: "megabazar-bca1e",
-      storageBucket: "megabazar-bca1e.firebasestorage.app",
-      messagingSenderId: "842109467351",
-      appId: "1:842109467351:web:7b9c4e2f1a8d603e5c4a1b"
+      apiKey: "AIzaSyDJVKNgig5glr7Pm3cbixrDnlAMdd3VR98",
+      authDomain: "megabazar-d836f.firebaseapp.com",
+      projectId: "megabazar-d836f",
+      storageBucket: "megabazar-d836f.firebasestorage.app",
+      messagingSenderId: "923808682916",
+      appId: "1:923808682916:web:7b8aa4901c00b6f36ca731"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -145,6 +145,12 @@
     let isAdmin = false;
     const cats = ['Todos', 'Electrónica', 'Moda', 'Hogar', 'Deporte', 'Juguetes', 'Motor'];
 
+    window.show = (id) => {
+      ['home', 'cart', 'sell', 'account'].forEach(s => {
+        document.getElementById(s).classList.toggle('hidden', s !== id);
+      });
+    };
+
     window.setCat = (c) => { cat = c; drawCats(); drawProducts(); };
 
     function drawCats() {
@@ -160,41 +166,40 @@
         (cat === 'Todos' || p.cat === cat) && p.title.toLowerCase().includes(q)
       );
       document.getElementById('products').innerHTML = filtered.map(p => {
-        const visual = p.icon.startsWith('http') ? `<img src="${p.icon}" alt="${p.title}">` : p.icon;
+        const visual = p.icon && p.icon.startsWith('http') ? `<img src="${p.icon}" alt="${p.title}">` : (p.icon || '📦');
         const delBtn = (isAdmin && !p.demo) ? `<button class="btn-del" onclick="removeProduct('${p.id}')">🗑️ Borrar</button>` : '';
         return `<div class="card">
           <div class="emoji">${visual}</div>
           <h4>${p.title}</h4>
-          <small>${p.cat}${p.demo ? ' · Ejemplo' : ''}</small>
-          <p class="price">${Number(p.price).toFixed(2).replace('.', ',')} €</p>
-          <button onclick="addCart('${p.title.replace(/'/g, "")}', ${p.price})">Añadir al carrito</button>
+          <div class="price">${Number(p.price).toFixed(2)} €</div>
+          <small style="color:#555">${p.cat}</small>
+          <button onclick="addToCart('${p.title.replace(/'/g, "\\'")}', ${Number(p.price)})">Añadir al carrito</button>
           ${delBtn}
         </div>`;
-      }).join('') || 'No hay resultados';
+      }).join('');
     }
 
-    window.addCart = (n, p) => {
-      cart.push({ n, p: Number(p) });
-      document.getElementById('items').innerHTML = cart.map(x =>
-        `<p>${x.n} - ${x.p.toFixed(2)} €</p>`
-      ).join('') + `<hr><b>Total: ${cart.reduce((s, x) => s + x.p, 0).toFixed(2)} €</b><p style="font-size:13px;color:#555">Pedido listo para confirmar con el vendedor.</p>`;
-      alert('Añadido al carrito');
+    window.addToCart = (title, price) => {
+      cart.push({ title, price });
+      drawCart();
+      alert('Añadido al carrito: ' + title);
     };
 
-    window.show = (id) => {
-      document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
-      document.getElementById(id).classList.remove('hidden');
+    window.removeFromCart = (idx) => {
+      cart.splice(idx, 1);
+      drawCart();
     };
 
-    onSnapshot(collection(db, "productos"), (snap) => {
-      liveProducts = snap.docs.map(d => ({ id: d.id, ...d.data(), demo: false }));
-      drawProducts();
-    });
-
-    window.addProduct = async () => {
-      if (!isAdmin) return alert('Solo el administrador puede publicar.');
-      const title = document.getElementById('p-title').value.trim();
-      const catVal = document.getElementById('p-cat').value;
-      const price = parseFloat(document.getElementById('p-price').value);
-      const icon = document.getElementById('p-icon').value.trim() || '📦';
-      if (!title || isNaN(price)) return alert('Escribe al menos el nombre y el precio.');
+    function drawCart() {
+      const box = document.getElementById('items');
+      if (!cart.length) {
+        box.innerHTML = 'Tu carrito está vacío.';
+        return;
+      }
+      const total = cart.reduce((sum, item) => sum + item.price, 0);
+      box.innerHTML = cart.map((item, idx) =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee">
+          <span>${item.title} - <b>${item.price.toFixed(2)} €</b></span>
+          <button class="btn-del" style="margin:0;padding:6px 10px" onclick="removeFromCart(${idx})">X</button>
+        </div>`
+      ).join('') + `<h3 style="margin-top:14px">Total: ${total.toFixed(2)} €</h3>
