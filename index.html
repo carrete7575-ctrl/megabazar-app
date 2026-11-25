@@ -111,11 +111,9 @@
     <button onclick="show('account')">Cuenta</button>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://gstatic.com";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://gstatic.com";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://gstatic.com";
-
+  <script type="module">import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyDJVKNgig5glr7Pm3cbixrDnlAMdd3VR98",
       authDomain: "megabazar-d836f.firebaseapp.com",
