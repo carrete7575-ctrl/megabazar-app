@@ -72,14 +72,14 @@ jobs:
 
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <manifest xmlns:android="http://android.com">
 
               <uses-permission android:name="android.permission.INTERNET" />
 
               <application
                   android:label="MegaBazar"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  :usesCleartextTraffic="true">
+                  android:usesCleartextTraffic="true">
 
                   <activity
                       android:name=".MainActivity"
