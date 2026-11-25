@@ -77,20 +77,21 @@ jobs:
           }
           EOF
 
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          A="android"
+          cat << EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://android.com">
-              <uses-permission android:name="android.permission.INTERNET" />
+          <manifest xmlns:${A}="http://android.com">
+              <uses-permission ${A}:name="android.permission.INTERNET" />
               <application
-                  android:label="MegaBazar"
-                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  android:usesCleartextTraffic="true">
+                  ${A}:label="MegaBazar"
+                  ${A}:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  ${A}:usesCleartextTraffic="true">
                   <activity
-                      android:name=".MainActivity"
-                      android:exported="true">
+                      ${A}:name=".MainActivity"
+                      ${A}:exported="true">
                       <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
+                          <action ${A}:name="android.intent.action.MAIN" />
+                          <category ${A}:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
               </application>
@@ -135,7 +136,7 @@ jobs:
           EOF
 
       - name: Generar APK
-        run: gradle assembleDebug --stacktrace
+        run: gradle assembleDebug
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
