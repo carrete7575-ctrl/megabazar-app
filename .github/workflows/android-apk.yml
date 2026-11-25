@@ -1,4 +1,3 @@
-
 name: Build MegaBazar APK
 
 on:
@@ -16,8 +15,14 @@ jobs:
 
       - name: Crear proyecto Android
         run: |
-          rm -f build.gradle settings.gradle gradle.properties
+          rm -rf app build.gradle settings.gradle gradle.properties
           echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+          cat << 'EOF' > gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.nonTransitiveRClass=true
+          EOF
 
           mkdir -p app/src/main/java/com/megabazar/app
 
@@ -59,8 +64,8 @@ jobs:
                   applicationId "com.megabazar.app"
                   minSdk 24
                   targetSdk 34
-                  versionCode 3
-                  versionName "3.0"
+                  versionCode 4
+                  versionName "4.0"
               }
           }
           EOF
@@ -74,7 +79,7 @@ jobs:
               <application
                   android:label="MegaBazar"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  android:usesCleartextTraffic="true">
+                  :usesCleartextTraffic="true">
 
                   <activity
                       android:name=".MainActivity"
@@ -101,20 +106,24 @@ jobs:
 
           public class MainActivity extends Activity {
 
+              private WebView webView;
+
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
-                  WebView webView = new WebView(this);
+                  webView = new WebView(this);
 
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
                   settings.setDomStorageEnabled(true);
+                  settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
 
                   webView.setWebViewClient(new WebViewClient());
+                  webView.clearCache(true);
 
                   webView.loadUrl(
-                      "https://carrete7575-ctrl.github.io/megabazar-app/"
+                      "https://github.io" + System.currentTimeMillis()
                   );
 
                   setContentView(webView);
@@ -122,8 +131,11 @@ jobs:
 
               @Override
               public void onBackPressed() {
-                  WebView webView = (WebView) findViewById(android.R.id.content).getRootView();
-                  super.onBackPressed();
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
               }
           }
           EOF
@@ -135,7 +147,7 @@ jobs:
           java-version: '17'
 
       - name: Configurar Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.4'
 
