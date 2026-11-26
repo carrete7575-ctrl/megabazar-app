@@ -5,6 +5,9 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,23 +20,27 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.4'
+          gradle-version: "8.4"
 
       - name: Crear proyecto Android
+        shell: bash
         run: |
           rm -rf app build.gradle settings.gradle gradle.properties local.properties
           echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-          printf "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\n" > gradle.properties
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
 
           mkdir -p app/src/main/java/com/megabazar/app
 
-          cat << 'EOF' > settings.gradle
+          cat > settings.gradle <<'EOF'
           pluginManagement {
               repositories {
                   google()
@@ -49,56 +56,55 @@ jobs:
               }
           }
           rootProject.name = "MegaBazar"
-          include ':app'
+          include(":app")
           EOF
 
-          cat << 'EOF' > build.gradle
+          cat > build.gradle <<'EOF'
           plugins {
-              id 'com.android.application' version '8.2.2' apply false
+              id "com.android.application" version "8.2.2" apply false
           }
           EOF
 
-          cat << 'EOF' > app/build.gradle
+          cat > app/build.gradle <<'EOF'
           plugins {
-              id 'com.android.application'
+              id "com.android.application"
           }
 
           android {
-              namespace 'com.megabazar.app'
+              namespace "com.megabazar.app"
               compileSdk 34
 
               defaultConfig {
                   applicationId "com.megabazar.app"
                   minSdk 24
                   targetSdk 34
-                  versionCode 4
-                  versionName "4.0"
+                  versionCode 5
+                  versionName "5.0"
               }
           }
           EOF
 
-          A="android"
-          cat << EOF > app/src/main/AndroidManifest.xml
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:${A}="http://android.com">
-              <uses-permission ${A}:name="android.permission.INTERNET" />
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
               <application
-                  ${A}:label="MegaBazar"
-                  ${A}:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  ${A}:usesCleartextTraffic="true">
+                  android:label="MegaBazar"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:usesCleartextTraffic="false">
                   <activity
-                      ${A}:name=".MainActivity"
-                      ${A}:exported="true">
+                      android:name=".MainActivity"
+                      android:exported="true">
                       <intent-filter>
-                          <action ${A}:name="android.intent.action.MAIN" />
-                          <category ${A}:name="android.intent.category.LAUNCHER" />
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
               </application>
           </manifest>
           EOF
 
-          cat << 'EOF' > app/src/main/java/com/megabazar/app/MainActivity.java
+          cat > app/src/main/java/com/megabazar/app/MainActivity.java <<'EOF'
           package com.megabazar.app;
 
           import android.app.Activity;
@@ -117,11 +123,10 @@ jobs:
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
                   settings.setDomStorageEnabled(true);
-                  settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
                   webView.setWebViewClient(new WebViewClient());
-                  webView.clearCache(true);
-                  webView.loadUrl("https://github.io" + System.currentTimeMillis());
                   setContentView(webView);
+                  webView.loadUrl("https://carrete7575-ctrl.github.io/megabazar-app/");
               }
 
               @Override
@@ -136,10 +141,11 @@ jobs:
           EOF
 
       - name: Generar APK
-        run: gradle assembleDebug
+        run: gradle --no-daemon assembleDebug
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: MegaBazar-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
