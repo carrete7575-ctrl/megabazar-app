@@ -2,67 +2,77 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080d2c"><title>MegaBazar</title>
+<meta name="theme-color" content="#080b2d"><title>MegaBazar</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#111318;color:#e8edff;font:16px Arial,sans-serif}
-header{background:#050b32;padding:20px;color:white}h1{font-size:38px;margin:6px 0}header small{font-size:17px}
-input,select{width:100%;padding:14px;border:1px solid #49516a;border-radius:12px;background:#292929;color:white;font-size:16px;margin:9px 0}
+header{background:#050b32;padding:20px;color:white}h1{font-size:clamp(34px,8vw,48px);margin:6px 0}
+input,select{display:block;width:100%;padding:14px;border:1px solid #49516a;border-radius:12px;background:#292929;color:white;font-size:16px;margin:10px 0}
 main{padding:18px 16px 110px;max-width:900px;margin:auto}.hero,.panel,.card{background:#1b1f2b;border-radius:18px;padding:18px;margin:12px 0 22px}
-.hero p{font-size:18px;line-height:1.4}.chips{display:flex;gap:8px;overflow:auto;margin:12px 0 25px}
+.hero p{font-size:18px;line-height:1.45}.chips{display:flex;gap:8px;overflow-x:auto;margin:12px 0 25px}
 button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e9efff;font-size:16px;font-weight:bold;cursor:pointer}
-.chip{white-space:nowrap;background:#292e3c}.chip.active{background:#243c85}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{padding:12px;margin:0}
-.emoji{background:#292e3c;border-radius:12px;text-align:center;font-size:40px;padding:18px;min-height:85px}
-.emoji img{width:100%;height:100px;object-fit:cover}.price{font-size:20px;font-weight:bold;color:#a9c2ff}
-.card button{width:100%;margin-top:8px}.nav{position:fixed;bottom:0;left:0;right:0;background:#202126;display:flex;justify-content:space-around;gap:4px;padding:12px 4px;z-index:5}
+button:disabled{opacity:.6}.chip{white-space:nowrap;background:#292e3c}.chip.active{background:#243c85}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{padding:12px;margin:0;min-width:0}
+.emoji{background:#292e3c;border-radius:12px;text-align:center;font-size:40px;padding:18px;min-height:85px;overflow:hidden}
+.emoji img{width:100%;height:110px;object-fit:cover;border-radius:8px}.price{font-size:20px;font-weight:bold;color:#a9c2ff}
+.card button{width:100%;margin-top:8px}.nav{position:fixed;bottom:0;left:0;right:0;background:#202126;display:flex;justify-content:space-around;gap:4px;padding:12px 4px calc(12px + env(safe-area-inset-bottom));z-index:5;border-top:1px solid #45464d}
 .nav button{padding:13px 10px}.hidden{display:none!important}.btn-del{background:#a82d35}.btn-sec{background:#354a79}
-.badge{display:inline-block;background:#1b6b32;padding:6px 10px;border-radius:20px}.msg{min-height:20px;color:#ffb4b4}.ok{color:#a7e8b4}
+.badge{display:inline-block;background:#1b6b32;padding:6px 10px;border-radius:20px}.msg{min-height:20px;color:#ffb4b4}.ok{color:#a7e8b4}.muted{color:#c1c7d7}
 @media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-</style>
-</head>
+</style></head>
 <body>
-<header><h1>🛍️ MegaBazar</h1><small>Compra. Vende. Descubre.</small>
-<input id="search" placeholder="¿Qué estás buscando?" aria-label="Buscar productos"></header>
+<header><h1>🛍️ MegaBazar</h1><p>Compra. Vende. Descubre.</p><input id="search" placeholder="¿Qué estás buscando?" aria-label="Buscar productos"></header>
 <main>
 <section id="home"><div class="hero"><h2>¡Bienvenido a MegaBazar!</h2><p>Compra y vende productos nuevos y de segunda mano en toda España.</p><b>Envío gratuito incluido en el precio</b></div>
-<h2>Categorías</h2><div id="cats" class="chips"></div><h2>Productos disponibles</h2><div id="products" class="grid"></div><p id="productsMsg"></p></section>
+<h2>Categorías</h2><div id="cats" class="chips"></div><h2>Productos disponibles</h2><div id="products" class="grid"></div><p id="productsMsg" class="muted"></p></section>
 <section id="cart" class="hidden"><h2>Mi carrito</h2><div class="panel" id="cartItems">Tu carrito está vacío.</div></section>
-<section id="sell" class="hidden"><h2>Panel de Administración y Ventas</h2>
-<div id="guest" class="panel"><p>Inicia sesión con la cuenta autorizada para gestionar productos.</p><button onclick="show('account')">Ir a Cuenta</button></div>
-<div id="adminPanel" class="panel hidden"><span class="badge">👑 MODO ADMINISTRADOR ACTIVO</span><h3>Publicar producto</h3>
-<input id="title" placeholder="Nombre del producto"><select id="category"><option>Electrónica</option><option>Moda</option><option>Hogar</option><option>Deporte</option><option>Juguetes</option><option>Motor</option></select>
+<section id="sell" class="hidden"><h2>Panel de Administración y Ventas</h2><div id="guest" class="panel"><p>Inicia sesión con la cuenta autorizada para gestionar productos.</p><button onclick="show('account')">Ir a Cuenta</button></div>
+<div id="adminPanel" class="panel hidden"><span class="badge">👑 MODO ADMINISTRADOR ACTIVO</span><h3>Publicar producto</h3><input id="title" placeholder="Nombre del producto">
+<select id="category"><option>Electrónica</option><option>Moda</option><option>Hogar</option><option>Deporte</option><option>Juguetes</option><option>Motor</option></select>
 <input id="price" type="number" min="0.01" step="0.01" placeholder="Precio en €"><input id="icon" placeholder="Emoji o enlace https:// de foto">
 <button id="publish" style="width:100%" onclick="addProduct()">Publicar en MegaBazar</button><p id="publishMsg" class="msg"></p></div></section>
-<section id="account" class="hidden"><h2>Mi cuenta</h2>
-<div id="authBox" class="panel"><p>Inicia sesión o crea una cuenta.</p><input id="email" type="email" autocomplete="username" placeholder="Correo electrónico">
-<input id="password" type="password" autocomplete="current-password" placeholder="Contraseña">
-<div style="display:flex;gap:8px"><button style="flex:1" onclick="login()">Entrar</button><button class="btn-sec" style="flex:1" onclick="register()">Crear cuenta</button></div><p id="authMsg" class="msg"></p></div>
-<div id="profile" class="panel hidden"><span id="adminBadge" class="badge hidden">👑 ADMINISTRADOR PRINCIPAL</span><p>Sesión iniciada como: <b id="userEmail"></b></p><p id="profileMsg"></p><button id="manage" class="hidden" style="width:100%;margin-bottom:8px" onclick="show('sell')">⚙️ Gestionar productos</button><button class="btn-del" style="width:100%" onclick="logout()">Cerrar sesión</button></div>
-</section>
+<section id="account" class="hidden"><h2>Mi cuenta</h2><div id="authBox" class="panel"><p>Inicia sesión o crea una cuenta.</p>
+<input id="email" type="email" autocomplete="username" placeholder="Correo electrónico"><input id="password" type="password" autocomplete="current-password" placeholder="Contraseña">
+<div style="display:flex;gap:8px"><button style="flex:1" onclick="login()">Entrar</button><button class="btn-sec" style="flex:1" onclick="register()">Crear cuenta</button></div><p id="authMsg" class="msg" role="status"></p></div>
+<div id="profile" class="panel hidden"><span id="adminBadge" class="badge hidden">👑 ADMINISTRADOR PRINCIPAL</span><p>Sesión iniciada como: <b id="userEmail"></b></p><p id="profileMsg"></p>
+<button id="manage" class="hidden" style="width:100%;margin-bottom:8px" onclick="show('sell')">⚙️ Gestionar productos</button><button class="btn-del" style="width:100%" onclick="logout()">Cerrar sesión</button></div></section>
 </main>
 <nav class="nav"><button onclick="show('home')">Inicio</button><button onclick="show('sell')">Vender</button><button onclick="show('cart')">Carrito</button><button onclick="show('account')">Cuenta</button></nav>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 const firebaseConfig={apiKey:"AIzaSyDJVKNgig5glr7Pm3cbixrDnlAMdd3VR98",authDomain:"megabazar-d836f.firebaseapp.com",projectId:"megabazar-d836f",storageBucket:"megabazar-d836f.firebasestorage.app",messagingSenderId:"923808682916",appId:"1:923808682916:web:7b8aa4901c00b6f36ca731"};
-const ADMIN_EMAIL="carrete7575@gmail.com",app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const ADMIN_EMAIL="carrete7575@gmail.com";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const demo=[["🎧","Auriculares inalámbricos","Electrónica",29.99],["⌚","Reloj moderno","Moda",39.99],["💡","Lámpara de diseño","Hogar",24.99],["🎒","Mochila deportiva","Deporte",34.99],["🎮","Videojuego","Juguetes",27.5],["🚲","Accesorio de bicicleta","Motor",18.9]].map((p,i)=>({id:"demo"+i,icon:p[0],title:p[1],cat:p[2],price:p[3],demo:true}));
-const cats=["Todos","Electrónica","Moda","Hogar","Deporte","Juguetes","Motor"];let products=[],cart=[],category="Todos",isAdmin=false;
-const $=id=>document.getElementById(id),msg=(id,s,ok=false)=>{$(id).textContent=s;$(id).classList.toggle("ok",ok)};
+const categories=["Todos","Electrónica","Moda","Hogar","Deporte","Juguetes","Motor"];
+let products=[],cart=[],selectedCategory="Todos",isAdmin=false;
+const $=id=>document.getElementById(id);
+function message(id,text,success=false){$(id).textContent=text;$(id).classList.toggle("ok",success)}
 window.show=id=>{["home","cart","sell","account"].forEach(x=>$(x).classList.toggle("hidden",x!==id));if(id==="sell")updateSell()};
-function drawCats(){$("cats").replaceChildren(...cats.map(c=>{let b=document.createElement("button");b.className="chip"+(c===category?" active":"");b.textContent=c;b.onclick=()=>{category=c;drawCats();drawProducts()};return b}))}
-function drawProducts(){let q=$("search").value.trim().toLowerCase(),all=[...products,...demo].filter(p=>(category==="Todos"||p.cat===category)&&String(p.title).toLowerCase().includes(q));$("products").replaceChildren();all.forEach(p=>{let card=document.createElement("article");card.className="card";let visual=document.createElement("div");visual.className="emoji";if(/^https:\\/\\//i.test(p.icon||"")){let im=document.createElement("img");im.src=p.icon;im.alt=p.title;visual.append(im)}else visual.textContent=p.icon||"📦";let h=document.createElement("h3");h.textContent=p.title;let price=document.createElement("p");price.className="price";price.textContent=Number(p.price).toFixed(2)+" €";let add=document.createElement("button");add.textContent="Añadir al carrito";add.onclick=()=>{cart.push({title:p.title,price:Number(p.price)});drawCart()};card.append(visual,h,price,add);if(isAdmin&&!p.demo){let del=document.createElement("button");del.className="btn-del";del.textContent="Borrar producto";del.onclick=()=>removeProduct(p.id);card.append(del)}$("products").append(card)});$("productsMsg").textContent=all.length?"":"No hay productos que coincidan con la búsqueda."}
-function drawCart(){$("cartItems").replaceChildren();if(!cart.length){$("cartItems").textContent="Tu carrito está vacío.";return}let total=0;cart.forEach((p,i)=>{total+=p.price;let row=document.createElement("p");row.textContent=p.title+" — "+p.price.toFixed(2)+" € ";let b=document.createElement("button");b.className="btn-del";b.textContent="Quitar";b.onclick=()=>{cart.splice(i,1);drawCart()};row.append(b);$("cartItems").append(row)});let t=document.createElement("h3");t.textContent="Total: "+total.toFixed(2)+" €";$("cartItems").append(t)}
+function drawCategories(){const box=$("cats");box.replaceChildren();categories.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===selectedCategory?" active":"");b.textContent=c;b.onclick=()=>{selectedCategory=c;drawCategories();drawProducts()};box.append(b)})}
+function drawProducts(){
+ const q=$("search").value.trim().toLocaleLowerCase("es");
+ const all=[...products,...demo].filter(p=>(selectedCategory==="Todos"||p.cat===selectedCategory)&&String(p.title||"").toLocaleLowerCase("es").includes(q));
+ const box=$("products");box.replaceChildren();
+ all.forEach(p=>{const card=document.createElement("article");card.className="card";const visual=document.createElement("div");visual.className="emoji";
+ if(typeof p.icon==="string"&&/^https:\/\//i.test(p.icon)){const img=document.createElement("img");img.src=p.icon;img.alt=p.title||"Producto";visual.append(img)}else visual.textContent=p.icon||"📦";
+ const h=document.createElement("h3");h.textContent=p.title||"Producto";const price=document.createElement("p");price.className="price";price.textContent=Number(p.price||0).toFixed(2)+" €";
+ const add=document.createElement("button");add.textContent="Añadir al carrito";add.onclick=()=>{cart.push({title:p.title,price:Number(p.price)});drawCart()};card.append(visual,h,price,add);
+ if(isAdmin&&!p.demo&&p.id){const del=document.createElement("button");del.className="btn-del";del.textContent="Borrar producto";del.onclick=()=>removeProduct(p.id);card.append(del)}box.append(card)});
+ $("productsMsg").textContent=all.length?"":"No hay productos que coincidan con tu búsqueda.";
+}
+function drawCart(){const box=$("cartItems");box.replaceChildren();if(!cart.length){box.textContent="Tu carrito está vacío.";return}let total=0;cart.forEach((p,i)=>{total+=p.price;const row=document.createElement("p");row.textContent=p.title+" — "+p.price.toFixed(2)+" € ";const b=document.createElement("button");b.className="btn-del";b.textContent="Quitar";b.onclick=()=>{cart.splice(i,1);drawCart()};row.append(b);box.append(row)});const t=document.createElement("h3");t.textContent="Total: "+total.toFixed(2)+" €";box.append(t)}
 function updateSell(){$("guest").classList.toggle("hidden",isAdmin);$("adminPanel").classList.toggle("hidden",!isAdmin)}
-function errorText(e){let m={"auth/invalid-email":"El correo no es válido.","auth/user-not-found":"No existe una cuenta con ese correo.","auth/wrong-password":"La contraseña no es correcta.","auth/invalid-credential":"El correo o la contraseña no son correctos.","auth/email-already-in-use":"Ese correo ya tiene cuenta. Pulsa Entrar.","auth/weak-password":"La contraseña debe tener al menos 6 caracteres.","auth/too-many-requests":"Demasiados intentos. Espera un poco.","auth/network-request-failed":"Comprueba tu conexión a Internet.","auth/operation-not-allowed":"Activa el acceso por correo y contraseña en Firebase."};return m[e.code]||("Error: "+(e.code||"desconocido"))}
-window.login=async()=>{let e=$("email").value.trim(),p=$("password").value;if(!e||!p)return msg("authMsg","Escribe el correo y la contraseña.");msg("authMsg","Comprobando…");try{await signInWithEmailAndPassword(auth,e,p);msg("authMsg","Sesión iniciada.",true)}catch(x){msg("authMsg",errorText(x))}};
-window.register=async()=>{let e=$("email").value.trim(),p=$("password").value;if(!e||!p)return msg("authMsg","Escribe el correo y una contraseña.");if(e.toLowerCase()===ADMIN_EMAIL)return msg("authMsg","La cuenta administradora debe iniciar sesión, no registrarse.");if(p.length<6)return msg("authMsg","La contraseña debe tener al menos 6 caracteres.");try{await createUserWithEmailAndPassword(auth,e,p);msg("authMsg","Cuenta creada correctamente.",true)}catch(x){msg("authMsg",errorText(x))}};
-window.logout=async()=>{try{await signOut(auth);show("home")}catch(e){msg("authMsg",errorText(e))}};
-window.addProduct=async()=>{if(!isAdmin||!auth.currentUser)return msg("publishMsg","Inicia sesión con la cuenta administradora.");let title=$("title").value.trim(),price=Number($("price").value),icon=$("icon").value.trim()||"📦";if(!title||!Number.isFinite(price)||price<=0)return msg("publishMsg","Escribe un nombre y un precio mayor que cero.");if(icon.startsWith("http")&&!/^https:\\/\\//i.test(icon))return msg("publishMsg","El enlace de la foto debe empezar por https://.");$("publish").disabled=true;try{await addDoc(collection(db,"products"),{title,cat:$("category").value,price,icon,createdAt:serverTimestamp(),createdBy:auth.currentUser.uid});$("title").value="";$("price").value="";$("icon").value="";msg("publishMsg","Producto publicado.",true)}catch(e){msg("publishMsg","No se pudo guardar en Firestore ("+(e.code||"error")+"). Revisa las reglas.")}finally{$("publish").disabled=false}};
+function authError(e){const m={"auth/invalid-email":"El correo no es válido.","auth/user-not-found":"No existe una cuenta con ese correo.","auth/wrong-password":"La contraseña no es correcta.","auth/invalid-credential":"El correo o la contraseña no son correctos.","auth/invalid-login-credentials":"El correo o la contraseña no son correctos.","auth/email-already-in-use":"Ese correo ya tiene cuenta. Pulsa Entrar.","auth/weak-password":"La contraseña debe tener al menos 6 caracteres.","auth/too-many-requests":"Demasiados intentos. Espera un poco.","auth/network-request-failed":"Comprueba tu conexión a Internet.","auth/operation-not-allowed":"Activa el acceso por correo y contraseña en Firebase."};return m[e.code]||("Error: "+(e.code||"desconocido"))}
+window.login=async()=>{const e=$("email").value.trim(),p=$("password").value;if(!e||!p)return message("authMsg","Escribe el correo y la contraseña.");message("authMsg","Comprobando…");try{await signInWithEmailAndPassword(auth,e,p);message("authMsg","Sesión iniciada.",true)}catch(x){message("authMsg",authError(x))}};
+window.register=async()=>{const e=$("email").value.trim(),p=$("password").value;if(!e||!p)return message("authMsg","Escribe el correo y una contraseña.");if(e.toLowerCase()===ADMIN_EMAIL)return message("authMsg","La cuenta administradora debe iniciar sesión, no registrarse.");if(p.length<6)return message("authMsg","La contraseña debe tener al menos 6 caracteres.");message("authMsg","Creando cuenta…");try{await createUserWithEmailAndPassword(auth,e,p);message("authMsg","Cuenta creada correctamente.",true)}catch(x){message("authMsg",authError(x))}};
+window.logout=async()=>{try{await signOut(auth);show("home")}catch(e){message("authMsg",authError(e))}};
+window.addProduct=async()=>{if(!isAdmin||!auth.currentUser)return message("publishMsg","Inicia sesión con la cuenta administradora.");const title=$("title").value.trim(),price=Number($("price").value),icon=$("icon").value.trim()||"📦";if(!title||!Number.isFinite(price)||price<=0)return message("publishMsg","Escribe un nombre y un precio mayor que cero.");if(icon.startsWith("http")&&!/^https:\/\//i.test(icon))return message("publishMsg","La foto debe usar un enlace https://.");$("publish").disabled=true;message("publishMsg","Publicando producto…");try{await addDoc(collection(db,"products"),{title,cat:$("category").value,price,icon,createdAt:serverTimestamp(),createdBy:auth.currentUser.uid});$("title").value="";$("price").value="";$("icon").value="";message("publishMsg","Producto publicado correctamente.",true)}catch(e){message("publishMsg","No se pudo guardar en Firestore ("+(e.code||"error")+"). Revisa las reglas.")}finally{$("publish").disabled=false}};
 async function removeProduct(id){if(!isAdmin||!auth.currentUser||!confirm("¿Quieres borrar este producto?"))return;try{await deleteDoc(doc(db,"products",id))}catch(e){alert("No se pudo borrar: "+(e.code||"error"))}}
 onAuthStateChanged(auth,user=>{isAdmin=!!user&&(user.email||"").toLowerCase()===ADMIN_EMAIL;$("authBox").classList.toggle("hidden",!!user);$("profile").classList.toggle("hidden",!user);$("userEmail").textContent=user?.email||"";$("adminBadge").classList.toggle("hidden",!isAdmin);$("manage").classList.toggle("hidden",!isAdmin);$("profileMsg").textContent=isAdmin?"Tienes acceso de administrador principal.":"Tu cuenta tiene acceso de comprador.";updateSell();drawProducts()});
-onSnapshot(collection(db,"products"),s=>{products=s.docs.map(d=>({id:d.id,...d.data(),demo:false}));drawProducts()},e=>{$("productsMsg").textContent="No se pudieron cargar productos ("+(e.code||"error")+"). Revisa las reglas de Firestore."});
-$("search").addEventListener("input",drawProducts);drawCats();drawProducts();drawCart();
+onSnapshot(collection(db,"products"),snap=>{products=snap.docs.map(d=>({id:d.id,...d.data(),demo:false}));drawProducts()},e=>{$("productsMsg").textContent="No se pudieron cargar productos ("+(e.code||"error")+"). Revisa reglas de Firestore."});
+$("search").addEventListener("input",drawProducts);drawCategories();drawProducts();drawCart();
 </script>
 </body></html>
