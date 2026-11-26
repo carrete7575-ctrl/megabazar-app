@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="es">
 <head>
@@ -66,4 +65,4 @@ onAuthStateChanged(auth,user=>{isAdmin=!!user&&(user.email||"").toLowerCase()===
 onSnapshot(collection(db,"products"),s=>{products=s.docs.map(d=>({id:d.id,...d.data(),demo:false}));drawProducts()},e=>{$("productsMsg").textContent="No se pudieron cargar productos ("+(e.code||"error")+"). Revisa las reglas de Firestore."});
 $("search").addEventListener("input",drawProducts);drawCats();drawProducts();drawCart();
 </script>
-</body></html
+</body></html>
