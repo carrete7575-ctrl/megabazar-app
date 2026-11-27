@@ -17,6 +17,11 @@ jobs:
       - name: Descargar proyecto
         uses: actions/checkout@v4
 
+      - name: Instalar ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
       - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
@@ -31,15 +36,22 @@ jobs:
       - name: Crear proyecto Android
         shell: bash
         run: |
+          set -e
+
           rm -rf app build.gradle settings.gradle gradle.properties local.properties
+
+          if [ ! -f ic_launcher.png ]; then
+            echo "ERROR: No se encuentra ic_launcher.png en la carpeta principal"
+            exit 1
+          fi
+
           echo "sdk.dir=$ANDROID_HOME" > local.properties
 
           mkdir -p app/src/main/java/com/megabazar/app
-          mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p app/src/main/res/mipmap-mdpi
-          mkdir -p app/src/main/res/mipmap-xhdpi
-          mkdir -p app/src/main/res/mipmap-xxhdpi
-          mkdir -p app/src/main/res/mipmap-xxxhdpi
+
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p "app/src/main/res/mipmap-$density"
+          done
 
           cat > gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
@@ -84,16 +96,13 @@ jobs:
                   applicationId "com.megabazar.app"
                   minSdk 24
                   targetSdk 34
-                  versionCode 6
-                  versionName "6.0"
+                  versionCode 7
+                  versionName "7.0"
               }
           }
           EOF
 
-          if [ ! -f ic_launcher.png ]; then
-            echo "ERROR: No se encuentra ic_launcher.png en la carpeta principal"
-            exit 1
-          fi
+          echo "Creando iconos de MegaBazar..."
 
           for item in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             case "$item" in
@@ -103,28 +112,37 @@ jobs:
               xxhdpi) size=144 ;;
               xxxhdpi) size=192 ;;
             esac
-            mkdir -p "app/src/main/res/mipmap-$item"
-            convert ic_launcher.png -resize "${size}x${size}" \
+
+            convert ic_launcher.png \
+              -resize "${size}x${size}" \
+              -gravity center \
+              -background none \
+              -extent "${size}x${size}" \
               "app/src/main/res/mipmap-$item/ic_launcher.png"
           done
 
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
               <uses-permission android:name="android.permission.INTERNET" />
+
               <application
                   android:label="MegaBazar"
                   android:icon="@mipmap/ic_launcher"
                   android:roundIcon="@mipmap/ic_launcher"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar"
                   android:usesCleartextTraffic="false">
+
                   <activity
                       android:name=".MainActivity"
                       android:exported="true">
+
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
+
                   </activity>
               </application>
           </manifest>
@@ -145,13 +163,20 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
                   webView = new WebView(this);
+
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
                   settings.setDomStorageEnabled(true);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
                   webView.setWebViewClient(new WebViewClient());
                   setContentView(webView);
-                  webView.loadUrl("https://carrete7575-ctrl.github.io/megabazar-app/");
+
+                  webView.loadUrl(
+                      "https://carrete7575-ctrl.github.io/megabazar-app/"
+                  );
               }
 
               @Override
@@ -174,3 +199,4 @@ jobs:
           name: MegaBazar-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 7
