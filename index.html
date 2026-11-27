@@ -1,8 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#080b2d">
 <title>MegaBazar</title>
 <style>
@@ -16,6 +16,7 @@ main{padding:18px 16px 110px;max-width:900px;margin:auto}
 .hero,.panel,.card{background:#1b1f2b;border-radius:18px;padding:18px;margin:12px 0 22px}
 .chips{display:flex;gap:8px;overflow-x:auto;margin:12px 0 25px}
 button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e9efff;font-size:16px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
 .chip{white-space:nowrap;background:#292e3c}
 .chip.active{background:#243c85}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -31,24 +32,28 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
 .btn-sec{background:#354a79}
 .btn-admin{background:#1b6b32;font-size:14px;padding:10px 14px}
 .badge{display:inline-block;background:#1b6b32;padding:6px 10px;border-radius:20px}
-.msg{min-height:20px;color:#ffb4b4}
+.msg{min-height:20px;color:#ffb4b4;overflow-wrap:anywhere}
 .ok{color:#a7e8b4}
+.note{font-size:13px;color:#b9c3df;line-height:1.45}
+.empty{color:#c6cbe0}
+@media(max-width:420px){.grid{grid-template-columns:1fr}.nav button{font-size:14px;padding:12px 5px}}
 </style>
-<script src="https://gstatic.com"></script>
-<script src="https://gstatic.com"></script>
-<script src="https://gstatic.com"></script>
+
+<!-- Firebase compat SDKs: must load before the application script below -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
-
 <header>
   <div class="top-bar">
     <div>
       <h1>🛍️ MegaBazar</h1>
       <p style="margin:0">Compra. Vende. Descubre.</p>
     </div>
-    <button type="button" class="btn-admin" onclick="openAdmin()">👑 Administrador</button>
+    <button type="button" class="btn-admin" id="adminButton">👑 Administrador</button>
   </div>
-  <input id="search" placeholder="¿Qué estás buscando?" oninput="drawProducts()">
+  <input id="search" placeholder="¿Qué estás buscando?" aria-label="Buscar productos">
 </header>
 
 <main>
@@ -62,7 +67,7 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
     <div id="cats" class="chips"></div>
     <h2>Productos disponibles</h2>
     <div id="products" class="grid"></div>
-    <p id="productsMsg"></p>
+    <p id="productsMsg" class="empty"></p>
   </section>
 
   <section id="cart" class="hidden">
@@ -71,27 +76,26 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
   </section>
 
   <section id="sell" class="hidden">
-    <h2>Panel de Administración</h2>
+    <h2>Vender productos</h2>
     <div id="guest" class="panel">
-      <p>Inicia sesión con <b>carrete7575@gmail.com</b> para gestionar productos.</p>
-      <button type="button" onclick="show('account')">Ir a Cuenta</button>
+      <p>Inicia sesión con la cuenta autorizada para gestionar productos.</p>
+      <button type="button" id="goAccount">Ir a Cuenta</button>
     </div>
     <div id="adminPanel" class="panel hidden">
       <span class="badge">👑 MODO ADMINISTRADOR ACTIVO</span>
       <h3>Publicar producto</h3>
-      <input id="title" placeholder="Nombre del producto">
-      <select id="category">
-        <option>Electrónica</option>
-        <option>Moda</option>
-        <option>Hogar</option>
-        <option>Deporte</option>
-        <option>Juguetes</option>
-        <option>Motor</option>
-      </select>
-      <input id="price" type="number" step="0.01" placeholder="Precio en €">
-      <input id="icon" placeholder="Emoji o enlace https://">
-      <button type="button" id="publish" style="width:100%" onclick="addProduct()">Publicar en MegaBazar</button>
-      <p id="publishMsg" class="msg"></p>
+      <form id="productForm">
+        <input id="title" placeholder="Nombre del producto" maxlength="100" required>
+        <select id="category" required>
+          <option>Electrónica</option><option>Moda</option><option>Hogar</option>
+          <option>Deporte</option><option>Juguetes</option><option>Motor</option>
+        </select>
+        <input id="price" type="number" min="0.01" max="10000000" step="0.01" placeholder="Precio en €" required>
+        <input id="icon" placeholder="Emoji o enlace https:// (opcional)" maxlength="500">
+        <button type="submit" id="publish" style="width:100%">Publicar en MegaBazar</button>
+      </form>
+      <p id="publishMsg" class="msg" aria-live="polite"></p>
+      <p class="note">La publicación en la nube requiere que Firebase esté configurado y que Firestore permita la operación.</p>
     </div>
   </section>
 
@@ -99,33 +103,52 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
     <h2>Mi cuenta</h2>
     <div id="authBox" class="panel">
       <p>Inicia sesión o crea una cuenta.</p>
-      <input id="email" type="email" placeholder="Correo electrónico">
-      <input id="password" type="password" placeholder="Contraseña">
-      <div style="display:flex;gap:8px">
-        <button type="button" style="flex:1" onclick="login()">Entrar</button>
-        <button type="button" class="btn-sec" style="flex:1" onclick="register()">Crear cuenta</button>
-      </div>
-      <p id="authMsg" class="msg"></p>
+      <form id="loginForm">
+        <input id="email" type="email" placeholder="Correo electrónico" autocomplete="email" required>
+        <input id="password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="current-password" minlength="6" required>
+        <div style="display:flex;gap:8px">
+          <button type="submit" style="flex:1">Entrar</button>
+          <button type="button" class="btn-sec" id="registerButton" style="flex:1">Crear cuenta</button>
+        </div>
+      </form>
+      <p id="authMsg" class="msg" aria-live="polite"></p>
     </div>
     <div id="profile" class="panel hidden">
       <span id="adminBadge" class="badge hidden">👑 ADMINISTRADOR PRINCIPAL</span>
       <p>Sesión: <b id="userEmail"></b></p>
       <p id="profileMsg"></p>
-      <button type="button" id="manage" class="hidden" style="width:100%;margin-bottom:8px" onclick="show('sell')">⚙️ Gestionar productos</button>
-      <button type="button" class="btn-del" style="width:100%" onclick="logout()">Cerrar sesión</button>
+      <button type="button" id="manage" class="hidden" style="width:100%;margin-bottom:8px">⚙️ Gestionar productos</button>
+      <button type="button" class="btn-del" id="logoutButton" style="width:100%">Cerrar sesión</button>
     </div>
   </section>
 </main>
 
-<nav class="nav">
-  <button type="button" onclick="show('home')">Inicio</button>
-  <button type="button" onclick="show('sell')">Vender</button>
-  <button type="button" onclick="show('cart')">Carrito</button>
-  <button type="button" onclick="show('account')">Cuenta</button>
+<nav class="nav" aria-label="Navegación principal">
+  <button type="button" data-page="home">Inicio</button>
+  <button type="button" data-page="sell">Vender</button>
+  <button type="button" data-page="cart">Carrito</button>
+  <button type="button" data-page="account">Cuenta</button>
 </nav>
 
 <script>
+"use strict";
+
+/*
+  CONFIGURACIÓN:
+  1. Abre Firebase Console > Configuración del proyecto > Tus aplicaciones.
+  2. Copia la configuración web exacta y reemplaza los valores de firebaseConfig.
+  3. No publiques contraseñas privadas ni claves de cuentas de servicio.
+*/
 const ADMIN_EMAIL = "carrete7575@gmail.com";
+const firebaseConfig = {
+  apiKey: "AIzaSyDJVKNgig5glr7Pm3cbixrDnlAMdd3VR98",
+  authDomain: "megabazar-d836f.firebaseapp.com",
+  projectId: "megabazar-d836f",
+  storageBucket: "megabazar-d836f.firebasestorage.app",
+  messagingSenderId: "923808682916",
+  appId: "1:923808682916:web:7b8aa4901c00b6f36ca731"
+};
+
 const demo = [
   {id:"d1",icon:"🎧",title:"Auriculares inalámbricos",cat:"Electrónica",price:29.99,demo:true},
   {id:"d2",icon:"⌚",title:"Reloj moderno",cat:"Moda",price:39.99,demo:true},
@@ -137,80 +160,115 @@ let products = [];
 let cart = [];
 let selectedCategory = "Todos";
 let isAdmin = false;
+let currentUser = null;
 let db = null;
 let auth = null;
+let firebaseReady = false;
+let unsubscribeProducts = null;
 
 function $(id){ return document.getElementById(id); }
 
 function show(id){
-  ["home","cart","sell","account"].forEach(function(x){
-    $(x).classList.toggle("hidden", x !== id);
+  const valid = ["home","cart","sell","account"];
+  if(!valid.includes(id)) id = "home";
+  valid.forEach(function(page){
+    $(page).classList.toggle("hidden", page !== id);
   });
   if(id === "sell"){
     $("guest").classList.toggle("hidden", isAdmin);
     $("adminPanel").classList.toggle("hidden", !isAdmin);
   }
+  if(id === "cart") drawCart();
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
+document.querySelectorAll("[data-page]").forEach(function(button){
+  button.addEventListener("click", function(){ show(button.dataset.page); });
+});
+$("adminButton").addEventListener("click", openAdmin);
+$("goAccount").addEventListener("click", function(){ show("account"); });
+$("manage").addEventListener("click", function(){ show("sell"); });
+$("logoutButton").addEventListener("click", logout);
+$("registerButton").addEventListener("click", register);
+$("loginForm").addEventListener("submit", function(event){
+  event.preventDefault();
+  login();
+});
+$("productForm").addEventListener("submit", function(event){
+  event.preventDefault();
+  addProduct();
+});
+$("search").addEventListener("input", drawProducts);
+
 function openAdmin(){
-  if(isAdmin){
-    show("sell");
-  } else {
+  if(isAdmin) show("sell");
+  else {
     show("account");
-    $("authMsg").textContent = "Inicia sesión con carrete7575@gmail.com para abrir el panel.";
+    $("authMsg").textContent = "Inicia sesión con " + ADMIN_EMAIL + " para abrir el panel de administración.";
   }
 }
 
 function drawCategories(){
   const box = $("cats");
-  box.innerHTML = "";
-  categories.forEach(function(c){
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "chip" + (c === selectedCategory ? " active" : "");
-    b.textContent = c;
-    b.onclick = function(){ selectedCategory = c; drawCategories(); drawProducts(); };
-    box.appendChild(b);
+  box.replaceChildren();
+  categories.forEach(function(category){
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "chip" + (category === selectedCategory ? " active" : "");
+    button.textContent = category;
+    button.addEventListener("click", function(){
+      selectedCategory = category;
+      drawCategories();
+      drawProducts();
+    });
+    box.appendChild(button);
   });
 }
 
 function drawProducts(){
-  const q = $("search").value.trim().toLowerCase();
-  const all = products.concat(demo).filter(function(p){
-    return (selectedCategory === "Todos" || p.cat === selectedCategory) && String(p.title || "").toLowerCase().indexOf(q) !== -1;
+  const query = $("search").value.trim().toLowerCase();
+  const all = products.concat(demo).filter(function(product){
+    const categoryMatches = selectedCategory === "Todos" || product.cat === selectedCategory;
+    return categoryMatches && String(product.title || "").toLowerCase().includes(query);
   });
   const box = $("products");
-  box.innerHTML = "";
-  all.forEach(function(p){
-    const card = document.createElement("div");
+  box.replaceChildren();
+  $("productsMsg").textContent = all.length ? "" : "No se encontraron productos.";
+  all.forEach(function(product){
+    const card = document.createElement("article");
     card.className = "card";
     const visual = document.createElement("div");
     visual.className = "emoji";
-    if(typeof p.icon === "string" && p.icon.indexOf("https://") === 0){
+    if(typeof product.icon === "string" && /^https:\/\//i.test(product.icon)){
       const img = document.createElement("img");
-      img.src = p.icon;
+      img.src = product.icon;
+      img.alt = product.title;
+      img.loading = "lazy";
       visual.appendChild(img);
     } else {
-      visual.textContent = p.icon || "📦";
+      visual.textContent = product.icon || "📦";
     }
-    const h = document.createElement("h3");
-    h.textContent = p.title;
+    const heading = document.createElement("h3");
+    heading.textContent = product.title || "Producto";
     const price = document.createElement("p");
     price.className = "price";
-    price.textContent = Number(p.price).toFixed(2) + " €";
+    price.textContent = Number(product.price).toFixed(2) + " €";
     const add = document.createElement("button");
     add.type = "button";
     add.textContent = "Añadir al carrito";
-    add.onclick = function(){ cart.push(p); drawCart(); };
-    card.append(visual, h, price, add);
-    if(isAdmin && !p.demo){
+    add.addEventListener("click", function(){
+      cart.push(product);
+      drawCart();
+      add.textContent = "Añadido ✓";
+      window.setTimeout(function(){ add.textContent = "Añadir al carrito"; }, 900);
+    });
+    card.append(visual, heading, price, add);
+    if(isAdmin && !product.demo){
       const del = document.createElement("button");
       del.type = "button";
       del.className = "btn-del";
       del.textContent = "Borrar producto";
-      del.onclick = function(){
-        if(db) db.collection("products").doc(p.id).delete().catch(function(e){ alert("Error: " + e.message); });
-      };
+      del.addEventListener("click", function(){ deleteProduct(product); });
       card.appendChild(del);
     }
     box.appendChild(card);
@@ -219,41 +277,236 @@ function drawProducts(){
 
 function drawCart(){
   const box = $("cartItems");
-  box.innerHTML = "";
-  if(!cart.length){ box.textContent = "Tu carrito está vacío."; return; }
+  box.replaceChildren();
+  if(!cart.length){
+    box.textContent = "Tu carrito está vacío.";
+    return;
+  }
   let total = 0;
-  cart.forEach(function(p, i){
-    total += Number(p.price);
+  cart.forEach(function(product, index){
+    total += Number(product.price) || 0;
     const row = document.createElement("p");
-    row.textContent = p.title + " - " + Number(p.price).toFixed(2) + " € ";
-    const rm = document.createElement("button");
-    rm.type = "button";
-    rm.className = "btn-del";
-    rm.textContent = "X";
-    rm.onclick = function(){ cart.splice(i, 1); drawCart(); };
-    row.appendChild(rm);
+    row.appendChild(document.createTextNode(
+      (product.title || "Producto") + " - " + (Number(product.price) || 0).toFixed(2) + " € "
+    ));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn-del";
+    remove.textContent = "Quitar";
+    remove.addEventListener("click", function(){
+      cart.splice(index, 1);
+      drawCart();
+    });
+    row.appendChild(remove);
     box.appendChild(row);
   });
-  const tot = document.createElement("p");
-  tot.innerHTML = "<b>Total: " + total.toFixed(2) + " €</b>";
-  box.appendChild(tot);
+  const totalLine = document.createElement("p");
+  const strong = document.createElement("b");
+  strong.textContent = "Total: " + total.toFixed(2) + " €";
+  totalLine.appendChild(strong);
+  box.appendChild(totalLine);
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "btn-sec";
+  clear.textContent = "Vaciar carrito";
+  clear.addEventListener("click", function(){
+    cart = [];
+    drawCart();
+  });
+  box.appendChild(clear);
+}
+
+function setMessage(id, message, success){
+  const el = $(id);
+  el.textContent = message;
+  el.classList.toggle("ok", Boolean(success));
+}
+
+function login(){
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  if(!email || !password){
+    setMessage("authMsg", "Escribe tu correo y contraseña.", false);
+    return;
+  }
+  if(!firebaseReady || !auth){
+    setMessage("authMsg", "Firebase no está conectado. Revisa la configuración y las bibliotecas de Firebase.", false);
+    return;
+  }
+  setMessage("authMsg", "Iniciando sesión…", true);
+  auth.signInWithEmailAndPassword(email, password).catch(function(error){
+    setMessage("authMsg", friendlyAuthError(error), false);
+  });
+}
+
+function register(){
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  if(!email || !password){
+    setMessage("authMsg", "Escribe tu correo y una contraseña.", false);
+    return;
+  }
+  if(password.length < 6){
+    setMessage("authMsg", "La contraseña debe tener al menos 6 caracteres.", false);
+    return;
+  }
+  if(!firebaseReady || !auth){
+    setMessage("authMsg", "Firebase no está conectado. Revisa la configuración y las bibliotecas de Firebase.", false);
+    return;
+  }
+  setMessage("authMsg", "Creando cuenta…", true);
+  auth.createUserWithEmailAndPassword(email, password).catch(function(error){
+    setMessage("authMsg", friendlyAuthError(error), false);
+  });
+}
+
+function logout(){
+  if(!auth || !firebaseReady){
+    currentUser = null;
+    isAdmin = false;
+    updateAccountUI();
+    show("home");
+    setMessage("authMsg", "Sesión local cerrada.", true);
+    return;
+  }
+  auth.signOut().then(function(){
+    show("home");
+  }).catch(function(error){
+    setMessage("authMsg", "No se pudo cerrar sesión: " + error.message, false);
+  });
+}
+
+function friendlyAuthError(error){
+  const code = error && error.code ? error.code : "";
+  const messages = {
+    "auth/invalid-email":"El correo electrónico no es válido.",
+    "auth/user-not-found":"No existe una cuenta con ese correo.",
+    "auth/wrong-password":"La contraseña no es correcta.",
+    "auth/invalid-credential":"Correo o contraseña incorrectos.",
+    "auth/email-already-in-use":"Ese correo ya tiene una cuenta.",
+    "auth/weak-password":"La contraseña es demasiado débil.",
+    "auth/operation-not-allowed":"Activa Email/Contraseña en Firebase Authentication.",
+    "auth/network-request-failed":"Error de conexión. Comprueba Internet.",
+    "auth/too-many-requests":"Demasiados intentos. Espera un poco y vuelve a probar."
+  };
+  return messages[code] || ("Error de autenticación: " + (error && error.message ? error.message : "desconocido"));
+}
+
+function updateAccountUI(){
+  const signedIn = Boolean(currentUser);
+  $("authBox").classList.toggle("hidden", signedIn);
+  $("profile").classList.toggle("hidden", !signedIn);
+  $("adminBadge").classList.toggle("hidden", !isAdmin);
+  $("manage").classList.toggle("hidden", !isAdmin);
+  $("userEmail").textContent = signedIn ? currentUser.email : "";
+  $("profileMsg").textContent = isAdmin ? "Tienes acceso al panel de administración." : "Tu cuenta está activa.";
+  $("guest").classList.toggle("hidden", isAdmin);
+  $("adminPanel").classList.toggle("hidden", !isAdmin);
+  drawProducts();
+}
+
+function addProduct(){
+  if(!isAdmin || !currentUser){
+    setMessage("publishMsg", "Debes iniciar sesión con la cuenta administradora.", false);
+    return;
+  }
+  const title = $("title").value.trim();
+  const cat = $("category").value;
+  const price = Number($("price").value);
+  const icon = $("icon").value.trim() || "📦";
+  if(!title || !Number.isFinite(price) || price <= 0){
+    setMessage("publishMsg", "Escribe un nombre y un precio mayor que cero.", false);
+    return;
+  }
+  if(icon.startsWith("http://")){
+    setMessage("publishMsg", "Por seguridad, las imágenes deben usar una dirección HTTPS.", false);
+    return;
+  }
+  const item = {
+    title:title, cat:cat, price:price, icon:icon,
+    createdAt: firebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
+    owner: currentUser.uid
+  };
+  if(!db){
+    setMessage("publishMsg", "No hay conexión con Firestore; no se ha guardado el producto.", false);
+    return;
+  }
+  $("publish").disabled = true;
+  db.collection("products").add(item).then(function(){
+    $("productForm").reset();
+    setMessage("publishMsg", "Producto publicado correctamente.", true);
+  }).catch(function(error){
+    setMessage("publishMsg", "No se pudo publicar: " + error.message + ". Revisa las reglas de Firestore.", false);
+  }).finally(function(){
+    $("publish").disabled = false;
+  });
+}
+
+function deleteProduct(product){
+  if(!isAdmin || !db || !product.id) return;
+  if(!window.confirm('¿Quieres borrar "' + product.title + '"?')) return;
+  db.collection("products").doc(product.id).delete().then(function(){
+    setMessage("publishMsg", "Producto eliminado.", true);
+  }).catch(function(error){
+    alert("No se pudo borrar el producto: " + error.message);
+  });
+}
+
+function startProductsListener(){
+  if(!db) return;
+  if(unsubscribeProducts) unsubscribeProducts();
+  unsubscribeProducts = db.collection("products").onSnapshot(function(snapshot){
+    products = snapshot.docs.map(function(doc){
+      return Object.assign({id:doc.id, demo:false}, doc.data());
+    });
+    drawProducts();
+  }, function(error){
+    $("productsMsg").textContent = "No se pudieron cargar los productos de Firebase. Comprueba las reglas de Firestore.";
+    console.error("Error cargando productos:", error);
+  });
+}
+
+function startFirebase(){
+  if(!window.firebase){
+    setMessage("authMsg", "No se pudieron cargar las bibliotecas de Firebase. Comprueba tu conexión a Internet.", false);
+    console.error("Firebase SDK no está disponible.");
+    return;
+  }
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    firebaseReady = true;
+
+    auth.onAuthStateChanged(function(user){
+      currentUser = user || null;
+      isAdmin = Boolean(user && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+      updateAccountUI();
+      if(user){
+        setMessage("authMsg", "", false);
+      }
+    });
+    startProductsListener();
+  }catch(error){
+    firebaseReady = false;
+    auth = null;
+    db = null;
+    console.error("No se pudo iniciar Firebase:", error);
+    setMessage("authMsg", "Error de configuración de Firebase. Comprueba firebaseConfig.", false);
+  }
 }
 
 drawCategories();
 drawProducts();
+drawCart();
+startFirebase();
 
-try {
-  const firebaseConfig = {
-    apiKey: "AIzaSyDJVKNgig5glr7Pm3cbixrDnlAMdd3VR98",
-    authDomain: "://firebaseapp.com",
-    projectId: "megabazar-d836f",
-    storageBucket: "megabazar-d836f.firebasestorage.app",
-    messagingSenderId: "923808682916",
-    appId: "1:923808682916:web:7b8aa4901c00b6f36ca731"
-  };
-  firebase.initializeApp(firebaseConfig);
-  auth = firebase.auth();
-  db = firebase.firestore();
-
-  auth.onAuthStateChanged(function(user){
-    isAdmin = !!(user && user.email && user.email.toLowerCase() === ADMIN_EMAIL);
+/*
+SEGURIDAD:
+La comprobación de ADMIN_EMAIL en este HTML solo controla la interfaz.
+Protege las operaciones de Firestore con reglas de seguridad del servidor.
+No permitas escrituras públicas en la colección products.
+*/
+</script>
+</body>
+</html>
