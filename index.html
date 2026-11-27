@@ -165,12 +165,7 @@ const firebaseConfig = {
   appId: "1:923808682916:web:7b8aa4901c00b6f36ca731"
 };
 
-const demo = [
-  {id:"d1",icon:"🎧",title:"Auriculares inalámbricos",cat:"Electrónica",price:29.99,demo:true},
-  {id:"d2",icon:"⌚",title:"Reloj moderno",cat:"Moda",price:39.99,demo:true},
-  {id:"d3",icon:"💡",title:"Lámpara de diseño",cat:"Hogar",price:24.99,demo:true},
-  {id:"d4",icon:"🎒",title:"Mochila deportiva",cat:"Deporte",price:34.99,demo:true}
-];
+
 const categories = ["Todos","Electrónica","Moda","Hogar","Deporte","Juguetes","Motor"];
 let products = [];
 let cart = [];
@@ -244,7 +239,7 @@ function drawCategories(){
 
 function drawProducts(){
   const query = $("search").value.trim().toLowerCase();
-  const all = products.concat(demo).filter(function(product){
+  const all = products.filter(function(product){
     const categoryMatches = selectedCategory === "Todos" || product.cat === selectedCategory;
     return categoryMatches && String(product.title || "").toLowerCase().includes(query);
   });
