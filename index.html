@@ -34,6 +34,9 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
 .msg{min-height:20px;color:#ffb4b4}
 .ok{color:#a7e8b4}
 </style>
+<script src="https://gstatic.com"></script>
+<script src="https://gstatic.com"></script>
+<script src="https://gstatic.com"></script>
 </head>
 <body>
 
@@ -43,9 +46,9 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
       <h1>🛍️ MegaBazar</h1>
       <p style="margin:0">Compra. Vende. Descubre.</p>
     </div>
-    <button id="btnAdminTop" class="btn-admin">👑 Administrador</button>
+    <button type="button" class="btn-admin" onclick="openAdmin()">👑 Administrador</button>
   </div>
-  <input id="search" placeholder="¿Qué estás buscando?">
+  <input id="search" placeholder="¿Qué estás buscando?" oninput="drawProducts()">
 </header>
 
 <main>
@@ -71,7 +74,7 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
     <h2>Panel de Administración</h2>
     <div id="guest" class="panel">
       <p>Inicia sesión con <b>carrete7575@gmail.com</b> para gestionar productos.</p>
-      <button id="btnGoAccount">Ir a Cuenta</button>
+      <button type="button" onclick="show('account')">Ir a Cuenta</button>
     </div>
     <div id="adminPanel" class="panel hidden">
       <span class="badge">👑 MODO ADMINISTRADOR ACTIVO</span>
@@ -87,7 +90,7 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
       </select>
       <input id="price" type="number" step="0.01" placeholder="Precio en €">
       <input id="icon" placeholder="Emoji o enlace https://">
-      <button id="publish" style="width:100%">Publicar en MegaBazar</button>
+      <button type="button" id="publish" style="width:100%" onclick="addProduct()">Publicar en MegaBazar</button>
       <p id="publishMsg" class="msg"></p>
     </div>
   </section>
@@ -99,8 +102,8 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
       <input id="email" type="email" placeholder="Correo electrónico">
       <input id="password" type="password" placeholder="Contraseña">
       <div style="display:flex;gap:8px">
-        <button id="btnLogin" style="flex:1">Entrar</button>
-        <button id="btnReg" class="btn-sec" style="flex:1">Crear cuenta</button>
+        <button type="button" style="flex:1" onclick="login()">Entrar</button>
+        <button type="button" class="btn-sec" style="flex:1" onclick="register()">Crear cuenta</button>
       </div>
       <p id="authMsg" class="msg"></p>
     </div>
@@ -108,100 +111,106 @@ button{border:0;border-radius:12px;padding:12px 14px;background:#454545;color:#e
       <span id="adminBadge" class="badge hidden">👑 ADMINISTRADOR PRINCIPAL</span>
       <p>Sesión: <b id="userEmail"></b></p>
       <p id="profileMsg"></p>
-      <button id="manage" class="hidden" style="width:100%;margin-bottom:8px">⚙️ Gestionar productos</button>
-      <button id="btnLogout" class="btn-del" style="width:100%">Cerrar sesión</button>
+      <button type="button" id="manage" class="hidden" style="width:100%;margin-bottom:8px" onclick="show('sell')">⚙️ Gestionar productos</button>
+      <button type="button" class="btn-del" style="width:100%" onclick="logout()">Cerrar sesión</button>
     </div>
   </section>
 </main>
 
 <nav class="nav">
-  <button id="navHome">Inicio</button>
-  <button id="navSell">Vender</button>
-  <button id="navCart">Carrito</button>
-  <button id="navAccount">Cuenta</button>
+  <button type="button" onclick="show('home')">Inicio</button>
+  <button type="button" onclick="show('sell')">Vender</button>
+  <button type="button" onclick="show('cart')">Carrito</button>
+  <button type="button" onclick="show('account')">Cuenta</button>
 </nav>
 
-<script type="module">
-import {initializeApp} from "https://gstatic.com";
-import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,onAuthStateChanged,signOut} from "https://gstatic.com";
-import {getFirestore,collection,addDoc,deleteDoc,doc,onSnapshot,serverTimestamp} from "https://gstatic.com";
-
-const firebaseConfig={
-  apiKey:"AIzaSyDJVKNgig5glr7Pm3cbixrDnlAMdd3VR98",
-  authDomain:"://firebaseapp.com",
-  projectId:"megabazar-d836f",
-  storageBucket:"megabazar-d836f.firebasestorage.app",
-  messagingSenderId:"923808682916",
-  appId:"1:923808682916:web:7b8aa4901c00b6f36ca731"
-};
-
-const ADMIN_EMAIL="carrete7575@gmail.com";
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
-
-const demo=[
+<script>
+const ADMIN_EMAIL = "carrete7575@gmail.com";
+const demo = [
   {id:"d1",icon:"🎧",title:"Auriculares inalámbricos",cat:"Electrónica",price:29.99,demo:true},
   {id:"d2",icon:"⌚",title:"Reloj moderno",cat:"Moda",price:39.99,demo:true},
   {id:"d3",icon:"💡",title:"Lámpara de diseño",cat:"Hogar",price:24.99,demo:true},
   {id:"d4",icon:"🎒",title:"Mochila deportiva",cat:"Deporte",price:34.99,demo:true}
 ];
+const categories = ["Todos","Electrónica","Moda","Hogar","Deporte","Juguetes","Motor"];
+let products = [];
+let cart = [];
+let selectedCategory = "Todos";
+let isAdmin = false;
+let db = null;
+let auth = null;
 
-const categories=["Todos","Electrónica","Moda","Hogar","Deporte","Juguetes","Motor"];
-let products=[];
-let cart=[];
-let selectedCategory="Todos";
-let isAdmin=false;
-
-const $=id=>document.getElementById(id);
+function $(id){ return document.getElementById(id); }
 
 function show(id){
-  ["home","cart","sell","account"].forEach(x=>$(x).classList.toggle("hidden",x!==id));
-  if(id==="sell"){
-    $("guest").classList.toggle("hidden",isAdmin);
-    $("adminPanel").classList.toggle("hidden",!isAdmin);
+  ["home","cart","sell","account"].forEach(function(x){
+    $(x).classList.toggle("hidden", x !== id);
+  });
+  if(id === "sell"){
+    $("guest").classList.toggle("hidden", isAdmin);
+    $("adminPanel").classList.toggle("hidden", !isAdmin);
   }
 }
 
-$("navHome").onclick=()=>show("home");
-$("navSell").onclick=()=>show("sell");
-$("navCart").onclick=()=>show("cart");
-$("navAccount").onclick=()=>show("account");
-$("btnGoAccount").onclick=()=>show("account");
-$("btnAdminTop").onclick=()=>{
-  if(isAdmin)show("sell");
-  else{show("account");$("authMsg").textContent="Inicia sesión con carrete7575@gmail.com";}
-};
+function openAdmin(){
+  if(isAdmin){
+    show("sell");
+  } else {
+    show("account");
+    $("authMsg").textContent = "Inicia sesión con carrete7575@gmail.com para abrir el panel.";
+  }
+}
 
 function drawCategories(){
-  const box=$("cats");box.innerHTML="";
-  categories.forEach(c=>{
-    const b=document.createElement("button");
-    b.className="chip"+(c===selectedCategory?" active":"");
-    b.textContent=c;
-    b.onclick=()=>{selectedCategory=c;drawCategories();drawProducts();};
+  const box = $("cats");
+  box.innerHTML = "";
+  categories.forEach(function(c){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip" + (c === selectedCategory ? " active" : "");
+    b.textContent = c;
+    b.onclick = function(){ selectedCategory = c; drawCategories(); drawProducts(); };
     box.appendChild(b);
   });
 }
 
 function drawProducts(){
-  const q=$("search").value.trim().toLowerCase();
-  const all=[...products,...demo].filter(p=>(selectedCategory==="Todos"||p.cat===selectedCategory)&&String(p.title||"").toLowerCase().includes(q));
-  const box=$("products");box.innerHTML="";
-  all.forEach(p=>{
-    const card=document.createElement("div");card.className="card";
-    const visual=document.createElement("div");visual.className="emoji";
-    if(typeof p.icon==="string"&&p.icon.startsWith("https://")){
-      const img=document.createElement("img");img.src=p.icon;visual.appendChild(img);
-    }else visual.textContent=p.icon||"📦";
-    const h=document.createElement("h3");h.textContent=p.title;
-    const price=document.createElement("p");price.className="price";price.textContent=Number(p.price).toFixed(2)+" €";
-    const add=document.createElement("button");add.textContent="Añadir al carrito";
-    add.onclick=()=>{cart.push(p);drawCart();};
-    card.append(visual,h,price,add);
-    if(isAdmin&&!p.demo){
-      const del=document.createElement("button");del.className="btn-del";del.textContent="Borrar producto";
-      del.onclick=()=>deleteDoc(doc(db,"products",p.id));
+  const q = $("search").value.trim().toLowerCase();
+  const all = products.concat(demo).filter(function(p){
+    return (selectedCategory === "Todos" || p.cat === selectedCategory) && String(p.title || "").toLowerCase().indexOf(q) !== -1;
+  });
+  const box = $("products");
+  box.innerHTML = "";
+  all.forEach(function(p){
+    const card = document.createElement("div");
+    card.className = "card";
+    const visual = document.createElement("div");
+    visual.className = "emoji";
+    if(typeof p.icon === "string" && p.icon.indexOf("https://") === 0){
+      const img = document.createElement("img");
+      img.src = p.icon;
+      visual.appendChild(img);
+    } else {
+      visual.textContent = p.icon || "📦";
+    }
+    const h = document.createElement("h3");
+    h.textContent = p.title;
+    const price = document.createElement("p");
+    price.className = "price";
+    price.textContent = Number(p.price).toFixed(2) + " €";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.textContent = "Añadir al carrito";
+    add.onclick = function(){ cart.push(p); drawCart(); };
+    card.append(visual, h, price, add);
+    if(isAdmin && !p.demo){
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-del";
+      del.textContent = "Borrar producto";
+      del.onclick = function(){
+        if(db) db.collection("products").doc(p.id).delete().catch(function(e){ alert("Error: " + e.message); });
+      };
       card.appendChild(del);
     }
     box.appendChild(card);
@@ -209,28 +218,42 @@ function drawProducts(){
 }
 
 function drawCart(){
-  const box=$("cartItems");box.innerHTML="";
-  if(!cart.length){box.textContent="Tu carrito está vacío.";return;}
-  let total=0;
-  cart.forEach((p,i)=>{
-    total+=Number(p.price);
-    const row=document.createElement("p");
-    row.textContent=p.title+" - "+Number(p.price).toFixed(2)+" € ";
-    const rm=document.createElement("button");rm.className="btn-del";rm.textContent="X";
-    rm.onclick=()=>{cart.splice(i,1);drawCart();};
-    row.appendChild(rm);box.appendChild(row);
+  const box = $("cartItems");
+  box.innerHTML = "";
+  if(!cart.length){ box.textContent = "Tu carrito está vacío."; return; }
+  let total = 0;
+  cart.forEach(function(p, i){
+    total += Number(p.price);
+    const row = document.createElement("p");
+    row.textContent = p.title + " - " + Number(p.price).toFixed(2) + " € ";
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "btn-del";
+    rm.textContent = "X";
+    rm.onclick = function(){ cart.splice(i, 1); drawCart(); };
+    row.appendChild(rm);
+    box.appendChild(row);
   });
-  const tot=document.createElement("p");tot.innerHTML="<b>Total: "+total.toFixed(2)+" €</b>";
+  const tot = document.createElement("p");
+  tot.innerHTML = "<b>Total: " + total.toFixed(2) + " €</b>";
   box.appendChild(tot);
 }
 
-$("publish").onclick=async()=>{
-  const title=$("title").value.trim(),cat=$("category").value,price=parseFloat($("price").value),icon=$("icon").value.trim()||"📦";
-  if(!title||isNaN(price))return $("publishMsg").textContent="Falta nombre o precio";
-  await addDoc(collection(db,"products"),{title,cat,price,icon,createdAt:serverTimestamp()});
-  $("title").value="";$("price").value="";$("icon").value="";
-  $("publishMsg").textContent="✅ Publicado";
-};
+drawCategories();
+drawProducts();
 
-$("btnLogin").onclick=()=>signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value).catch(e=>$("authMsg").textContent=e.message);
-$("btnReg").onclick=()=>createUserWithEmailAndPassword(auth,$("email").value.trim(),$("password").value).catch(e=>$("authMsg").textContent=e.message);
+try {
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJVKNgig5glr7Pm3cbixrDnlAMdd3VR98",
+    authDomain: "://firebaseapp.com",
+    projectId: "megabazar-d836f",
+    storageBucket: "megabazar-d836f.firebasestorage.app",
+    messagingSenderId: "923808682916",
+    appId: "1:923808682916:web:7b8aa4901c00b6f36ca731"
+  };
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+
+  auth.onAuthStateChanged(function(user){
+    isAdmin = !!(user && user.email && user.email.toLowerCase() === ADMIN_EMAIL);
