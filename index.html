@@ -73,6 +73,18 @@ button:disabled{opacity:.55;cursor:not-allowed}
   <section id="cart" class="hidden">
     <h2>Mi carrito</h2>
     <div class="panel" id="cartItems">Tu carrito está vacío.</div>
+    <div class="panel">
+      <h3>Finalizar pedido</h3>
+      <p class="note">Introduce los datos de entrega para crear un pedido. Esta versión registra pedidos como “Pendiente de pago”; no cobra dinero todavía. Para pagos reales debes conectar Stripe u otro proveedor mediante un servidor seguro.</p>
+      <input id="shipName" placeholder="Nombre y apellidos" autocomplete="name">
+      <input id="shipAddress" placeholder="Dirección de envío" autocomplete="street-address">
+      <input id="shipCity" placeholder="Código postal y localidad" autocomplete="postal-code">
+      <input id="shipPhone" placeholder="Teléfono de contacto" autocomplete="tel">
+      <button type="button" id="placeOrder" style="width:100%">Crear pedido</button>
+      <p id="orderMsg" class="msg" aria-live="polite"></p>
+      <h3>Mis pedidos</h3>
+      <div id="myOrders">Inicia sesión para consultar tus pedidos.</div>
+    </div>
   </section>
 
   <section id="sell" class="hidden">
@@ -82,7 +94,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <button type="button" id="goAccount">Ir a Cuenta</button>
     </div>
     <div id="adminPanel" class="panel hidden">
-      <span class="badge">👑 MODO ADMINISTRADOR ACTIVO</span>
+      <span class="badge" id="managementBadge">📦 PANEL DE VENDEDOR</span>
       <h3>Publicar producto</h3>
       <form id="productForm">
         <input id="title" placeholder="Nombre del producto" maxlength="100" required>
@@ -122,6 +134,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <form id="loginForm">
         <input id="email" type="email" placeholder="Correo electrónico" autocomplete="email" required>
         <input id="password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="current-password" minlength="6" required>
+        <label for="accountRole">Tipo de cuenta</label>
+        <select id="accountRole">
+          <option value="buyer">Comprador</option>
+          <option value="seller">Vendedor</option>
+        </select>
         <div style="display:flex;gap:8px">
           <button type="submit" style="flex:1">Entrar</button>
           <button type="button" class="btn-sec" id="registerButton" style="flex:1">Crear cuenta</button>
@@ -134,6 +151,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <p>Sesión: <b id="userEmail"></b></p>
       <p id="profileMsg"></p>
       <button type="button" id="manage" class="hidden" style="width:100%;margin-bottom:8px">⚙️ Gestionar productos</button>
+      <button type="button" id="sellerProducts" class="hidden" style="width:100%;margin-bottom:8px">📦 Mis productos</button>
+      <button type="button" id="myOrdersButton" style="width:100%;margin-bottom:8px">🧾 Mis pedidos</button>
       <button type="button" class="btn-del" id="logoutButton" style="width:100%">Cerrar sesión</button>
     </div>
   </section>
@@ -172,12 +191,17 @@ let cart = [];
 let selectedCategory = "Todos";
 let isAdmin = false;
 let currentUser = null;
+let accountRole = "buyer";
 let db = null;
 let auth = null;
 let firebaseReady = false;
 let unsubscribeProducts = null;
 
 function $(id){ return document.getElementById(id); }
+
+function canManageProducts(){
+  return isAdmin || (Boolean(currentUser) && accountRole === "seller");
+}
 
 function show(id){
   const valid = ["home","cart","sell","account"];
@@ -186,8 +210,8 @@ function show(id){
     $(page).classList.toggle("hidden", page !== id);
   });
   if(id === "sell"){
-    $("guest").classList.toggle("hidden", isAdmin);
-    $("adminPanel").classList.toggle("hidden", !isAdmin);
+    $("guest").classList.toggle("hidden", canManageProducts());
+    $("adminPanel").classList.toggle("hidden", !canManageProducts());
     drawAdminProducts();
   }
   if(id === "cart") drawCart();
@@ -200,6 +224,9 @@ document.querySelectorAll("[data-page]").forEach(function(button){
 $("adminButton").addEventListener("click", openAdmin);
 $("goAccount").addEventListener("click", function(){ show("account"); });
 $("manage").addEventListener("click", function(){ show("sell"); });
+$("sellerProducts").addEventListener("click", function(){ show("sell"); });
+$("myOrdersButton").addEventListener("click", function(){ show("cart"); loadMyOrders(); });
+$("placeOrder").addEventListener("click", placeOrder);
 $("logoutButton").addEventListener("click", logout);
 $("registerButton").addEventListener("click", register);
 $("loginForm").addEventListener("submit", function(event){
@@ -276,7 +303,7 @@ function drawProducts(){
       window.setTimeout(function(){ add.textContent = "Añadir al carrito"; }, 900);
     });
     card.append(visual, heading, price, add);
-    if(isAdmin && !product.demo){
+    if((isAdmin || (currentUser && product.owner === currentUser.uid)) && !product.demo){
       const del = document.createElement("button");
       del.type = "button";
       del.className = "btn-del";
@@ -335,16 +362,17 @@ function drawAdminProducts(){
   const list = $("adminProductsList");
   if (!count || !list) return;
   count.textContent = String(products.length);
-  if (!isAdmin) {
-    list.textContent = "Inicia sesión con la cuenta administradora para gestionar productos.";
+  if (!canManageProducts()) {
+    list.textContent = "Inicia sesión con una cuenta de vendedor o administrador para gestionar productos.";
     return;
   }
+  const managedProducts = isAdmin ? products : products.filter(function(product){ return product.owner === currentUser.uid; });
   list.replaceChildren();
-  if (!products.length) {
+  if (!managedProducts.length) {
     list.textContent = "Todavía no hay productos publicados en la base de datos.";
     return;
   }
-  products.forEach(function(product) {
+  managedProducts.forEach(function(product) {
     const row = document.createElement("div");
     row.style.cssText = "padding:12px 0;border-bottom:1px solid #3a4053";
     const name = document.createElement("b");
@@ -369,8 +397,8 @@ function drawAdminProducts(){
 }
 
 function editProduct(product){
-  if (!isAdmin || !db || !product.id) {
-    setMessage("publishMsg", "No se puede editar: Firebase no está conectado o faltan permisos.", false);
+  if (!(isAdmin || (currentUser && product.owner === currentUser.uid)) || !db || !product.id) {
+    setMessage("publishMsg", "No se puede editar: no tienes permisos o Firebase no está conectado.", false);
     return;
   }
   const title = window.prompt("Nombre del producto:", product.title || "");
@@ -429,26 +457,105 @@ function startOrdersListener(){
         if ((order.status || "Pendiente") === status) option.selected = true;
         select.appendChild(option);
       });
+      const tracking = document.createElement("input");
+      tracking.placeholder = "Número de seguimiento del envío";
+      tracking.value = order.trackingNumber || "";
       const save = document.createElement("button");
       save.type = "button";
       save.className = "btn-sec";
       save.style.marginTop = "8px";
-      save.textContent = "Guardar estado";
+      save.textContent = "Guardar estado y seguimiento";
       save.addEventListener("click", function(){
         if (!isAdmin) return;
-        db.collection("orders").doc(doc.id).update({status:select.value}).then(function(){
+        db.collection("orders").doc(doc.id).update({status:select.value, trackingNumber:tracking.value.trim()}).then(function(){
           details.textContent = "Estado: " + select.value + " · Total: " + (Number(order.total) || 0).toFixed(2) + " €";
           setMessage("publishMsg", "Estado del pedido actualizado.", true);
         }).catch(function(error){
           setMessage("publishMsg", "No se pudo actualizar el pedido: " + error.message, false);
         });
       });
-      row.append(heading, details, select, save);
+      row.append(heading, details, select, tracking, save);
       list.appendChild(row);
     });
   }, function(error){
     list.textContent = "No se pudieron leer pedidos. Si todavía no has configurado la colección orders o sus reglas, esta sección no estará disponible.";
     console.warn("Pedidos no disponibles:", error.message);
+  });
+}
+
+function placeOrder(){
+  if (!cart.length) {
+    setMessage("orderMsg", "Tu carrito está vacío.", false);
+    return;
+  }
+  if (!currentUser || !db) {
+    setMessage("orderMsg", "Inicia sesión y comprueba la conexión a Firebase para crear un pedido.", false);
+    show("account");
+    return;
+  }
+  const name = $("shipName").value.trim();
+  const address = $("shipAddress").value.trim();
+  const city = $("shipCity").value.trim();
+  const phone = $("shipPhone").value.trim();
+  if (!name || !address || !city || !phone) {
+    setMessage("orderMsg", "Completa todos los datos de entrega.", false);
+    return;
+  }
+  const items = cart.map(function(p){ return {
+    productId: p.id || "", title: p.title || "Producto",
+    price: Number(p.price) || 0, quantity: 1
+  };});
+  const total = items.reduce(function(sum, item){ return sum + item.price * item.quantity; }, 0);
+  $("placeOrder").disabled = true;
+  db.collection("orders").add({
+    userId: currentUser.uid,
+    email: currentUser.email || "",
+    items: items,
+    total: total,
+    shipping: {name:name, address:address, city:city, phone:phone},
+    status: "Pendiente de pago",
+    paymentStatus: "No pagado",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(ref){
+    cart = [];
+    drawCart();
+    setMessage("orderMsg", "Pedido creado (" + ref.id + "). Estado: pendiente de pago. Para cobrar en línea hay que configurar una pasarela segura.", true);
+    loadMyOrders();
+  }).catch(function(error){
+    setMessage("orderMsg", "No se pudo crear el pedido: " + error.message + ". Revisa las reglas de Firestore.", false);
+  }).finally(function(){ $("placeOrder").disabled = false; });
+}
+
+function loadMyOrders(){
+  const box = $("myOrders");
+  if (!box) return;
+  if (!currentUser || !db) {
+    box.textContent = "Inicia sesión para consultar tus pedidos.";
+    return;
+  }
+  db.collection("orders").where("userId", "==", currentUser.uid).limit(50).get().then(function(snapshot){
+    box.replaceChildren();
+    if (snapshot.empty) {
+      box.textContent = "Todavía no tienes pedidos.";
+      return;
+    }
+    snapshot.forEach(function(doc){
+      const order = doc.data() || {};
+      const item = document.createElement("div");
+      item.className = "panel";
+      const title = document.createElement("b");
+      title.textContent = "Pedido " + doc.id;
+      const status = document.createElement("p");
+      status.textContent = "Estado: " + (order.status || "Pendiente");
+      const tracking = document.createElement("p");
+      tracking.textContent = "Seguimiento: " + (order.trackingNumber || "Aún no disponible");
+      const total = document.createElement("p");
+      total.textContent = "Total: " + (Number(order.total) || 0).toFixed(2) + " €";
+      item.append(title, status, tracking, total);
+      box.appendChild(item);
+    });
+  }).catch(function(error){
+    box.textContent = "No se pudieron consultar tus pedidos: " + error.message;
   });
 }
 
@@ -491,7 +598,15 @@ function register(){
     return;
   }
   setMessage("authMsg", "Creando cuenta…", true);
-  auth.createUserWithEmailAndPassword(email, password).catch(function(error){
+  const role = $("accountRole") ? $("accountRole").value : "buyer";
+  auth.createUserWithEmailAndPassword(email, password).then(function(credential){
+    accountRole = role;
+    return db.collection("users").doc(credential.user.uid).set({
+      email: email, role: role, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }).then(function(){
+    setMessage("authMsg", "Cuenta creada correctamente.", true);
+  }).catch(function(error){
     setMessage("authMsg", friendlyAuthError(error), false);
   });
 }
@@ -534,17 +649,19 @@ function updateAccountUI(){
   $("profile").classList.toggle("hidden", !signedIn);
   $("adminBadge").classList.toggle("hidden", !isAdmin);
   $("manage").classList.toggle("hidden", !isAdmin);
+  if ($("managementBadge")) $("managementBadge").textContent = isAdmin ? "👑 MODO ADMINISTRADOR ACTIVO" : "📦 PANEL DE VENDEDOR";
+  $("sellerProducts").classList.toggle("hidden", !(isAdmin || accountRole === "seller"));
   $("userEmail").textContent = signedIn ? currentUser.email : "";
-  $("profileMsg").textContent = isAdmin ? "Tienes acceso al panel de administración." : "Tu cuenta está activa.";
-  $("guest").classList.toggle("hidden", isAdmin);
-  $("adminPanel").classList.toggle("hidden", !isAdmin);
+  $("profileMsg").textContent = isAdmin ? "Tienes acceso al panel de administración." : (accountRole === "seller" ? "Cuenta de vendedor activa." : "Cuenta de comprador activa.");
+  $("guest").classList.toggle("hidden", canManageProducts());
+  $("adminPanel").classList.toggle("hidden", !canManageProducts());
   drawProducts();
   drawAdminProducts();
 }
 
 function addProduct(){
-  if(!isAdmin || !currentUser){
-    setMessage("publishMsg", "Debes iniciar sesión con la cuenta administradora.", false);
+  if(!canManageProducts() || !currentUser){
+    setMessage("publishMsg", "Debes iniciar sesión con una cuenta de vendedor o administrador.", false);
     return;
   }
   const title = $("title").value.trim();
@@ -580,7 +697,7 @@ function addProduct(){
 }
 
 function deleteProduct(product){
-  if(!isAdmin || !db || !product.id) return;
+  if(!(isAdmin || (currentUser && product.owner === currentUser.uid)) || !db || !product.id) return;
   if(!window.confirm('¿Quieres borrar "' + product.title + '"?')) return;
   db.collection("products").doc(product.id).delete().then(function(){
     setMessage("publishMsg", "Producto eliminado.", true);
@@ -618,7 +735,14 @@ function startFirebase(){
     auth.onAuthStateChanged(function(user){
       currentUser = user || null;
       isAdmin = Boolean(user && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
-      updateAccountUI();
+      accountRole = "buyer";
+      const rolePromise = (user && db) ? db.collection("users").doc(user.uid).get().then(function(doc){
+        if (doc.exists && doc.data().role) accountRole = doc.data().role;
+      }).catch(function(){}) : Promise.resolve();
+      rolePromise.then(function(){
+        updateAccountUI();
+        loadMyOrders();
+      });
       if(user){
         setMessage("authMsg", "", false);
       }
