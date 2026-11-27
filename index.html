@@ -96,6 +96,22 @@ button:disabled{opacity:.55;cursor:not-allowed}
       </form>
       <p id="publishMsg" class="msg" aria-live="polite"></p>
       <p class="note">La publicación en la nube requiere que Firebase esté configurado y que Firestore permita la operación.</p>
+      <hr style="border-color:#3a4053;margin:24px 0">
+      <h3>Resumen de la tienda</h3>
+      <div class="grid">
+        <div class="card"><p class="note">Productos publicados</p><h2 id="adminProductCount">0</h2></div>
+        <div class="card"><p class="note">Pedidos registrados</p><h2 id="adminOrderCount">0</h2></div>
+      </div>
+      <h3>Gestionar productos</h3>
+      <div id="adminProductsList" class="panel">Cargando productos…</div>
+      <hr style="border-color:#3a4053;margin:24px 0">
+      <h3>Pedidos y ventas</h3>
+      <p class="note">Los pedidos aparecerán aquí cuando tu aplicación tenga un proceso de compra que los guarde en la colección <code>orders</code> de Firestore.</p>
+      <div id="adminOrdersList" class="panel">Todavía no se han cargado pedidos.</div>
+      <hr style="border-color:#3a4053;margin:24px 0">
+      <h3>Usuarios</h3>
+      <p class="note">Por seguridad, una página web no puede enumerar directamente todos los usuarios de Firebase Authentication. Para un listado real hace falta una función segura de servidor (Firebase Admin SDK). No mostramos datos de usuarios que no estén disponibles.</p>
+      <div id="adminUsersInfo" class="panel">La gestión de usuarios requiere configurar una función segura en el servidor.</div>
     </div>
   </section>
 
@@ -177,6 +193,7 @@ function show(id){
   if(id === "sell"){
     $("guest").classList.toggle("hidden", isAdmin);
     $("adminPanel").classList.toggle("hidden", !isAdmin);
+    drawAdminProducts();
   }
   if(id === "cart") drawCart();
   window.scrollTo({top:0,behavior:"smooth"});
@@ -234,6 +251,7 @@ function drawProducts(){
   const box = $("products");
   box.replaceChildren();
   $("productsMsg").textContent = all.length ? "" : "No se encontraron productos.";
+  drawAdminProducts();
   all.forEach(function(product){
     const card = document.createElement("article");
     card.className = "card";
@@ -277,6 +295,7 @@ function drawProducts(){
 
 function drawCart(){
   const box = $("cartItems");
+  if ($("adminCartCount")) $("adminCartCount").textContent = String(cart.length);
   box.replaceChildren();
   if(!cart.length){
     box.textContent = "Tu carrito está vacío.";
@@ -314,6 +333,128 @@ function drawCart(){
     drawCart();
   });
   box.appendChild(clear);
+}
+
+function drawAdminProducts(){
+  const count = $("adminProductCount");
+  const list = $("adminProductsList");
+  if (!count || !list) return;
+  count.textContent = String(products.length);
+  if (!isAdmin) {
+    list.textContent = "Inicia sesión con la cuenta administradora para gestionar productos.";
+    return;
+  }
+  list.replaceChildren();
+  if (!products.length) {
+    list.textContent = "Todavía no hay productos publicados en la base de datos.";
+    return;
+  }
+  products.forEach(function(product) {
+    const row = document.createElement("div");
+    row.style.cssText = "padding:12px 0;border-bottom:1px solid #3a4053";
+    const name = document.createElement("b");
+    name.textContent = product.title || "Producto sin nombre";
+    const details = document.createElement("p");
+    details.className = "note";
+    details.textContent = (product.cat || "Sin categoría") + " · " + (Number(product.price) || 0).toFixed(2) + " €";
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "btn-sec";
+    edit.textContent = "Editar";
+    edit.style.marginRight = "8px";
+    edit.addEventListener("click", function(){ editProduct(product); });
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn-del";
+    del.textContent = "Eliminar";
+    del.addEventListener("click", function(){ deleteProduct(product); });
+    row.append(name, details, edit, del);
+    list.appendChild(row);
+  });
+}
+
+function editProduct(product){
+  if (!isAdmin || !db || !product.id) {
+    setMessage("publishMsg", "No se puede editar: Firebase no está conectado o faltan permisos.", false);
+    return;
+  }
+  const title = window.prompt("Nombre del producto:", product.title || "");
+  if (title === null) return;
+  if (!title.trim()) {
+    setMessage("publishMsg", "El nombre no puede estar vacío.", false);
+    return;
+  }
+  const priceText = window.prompt("Precio en euros:", String(Number(product.price) || 0));
+  if (priceText === null) return;
+  const price = Number(priceText);
+  if (!Number.isFinite(price) || price <= 0) {
+    setMessage("publishMsg", "El precio debe ser mayor que cero.", false);
+    return;
+  }
+  const category = window.prompt("Categoría (Electrónica, Moda, Hogar, Deporte, Juguetes o Motor):", product.cat || "Hogar");
+  if (category === null) return;
+  const allowed = ["Electrónica","Moda","Hogar","Deporte","Juguetes","Motor"];
+  if (!allowed.includes(category.trim())) {
+    setMessage("publishMsg", "Categoría no válida.", false);
+    return;
+  }
+  db.collection("products").doc(product.id).update({
+    title: title.trim(), price: price, cat: category.trim()
+  }).then(function(){
+    setMessage("publishMsg", "Producto actualizado correctamente.", true);
+  }).catch(function(error){
+    setMessage("publishMsg", "No se pudo editar: " + error.message + ". Revisa las reglas de Firestore.", false);
+  });
+}
+
+function startOrdersListener(){
+  const list = $("adminOrdersList");
+  if (!db || !list) return;
+  db.collection("orders").orderBy("createdAt", "desc").limit(100).onSnapshot(function(snapshot){
+    $("adminOrderCount").textContent = String(snapshot.size);
+    list.replaceChildren();
+    if (snapshot.empty) {
+      list.textContent = "No hay pedidos todavía. Los pedidos deben guardarse en Firestore en la colección orders.";
+      return;
+    }
+    snapshot.forEach(function(doc){
+      const order = doc.data() || {};
+      const row = document.createElement("div");
+      row.style.cssText = "padding:12px 0;border-bottom:1px solid #3a4053";
+      const heading = document.createElement("b");
+      heading.textContent = "Pedido " + doc.id;
+      const details = document.createElement("p");
+      details.className = "note";
+      details.textContent = "Estado: " + (order.status || "Pendiente") + " · Total: " + (Number(order.total) || 0).toFixed(2) + " €";
+      const select = document.createElement("select");
+      ["Pendiente","Pagado","En preparación","Enviado","Entregado","Cancelado"].forEach(function(status){
+        const option = document.createElement("option");
+        option.value = status;
+        option.textContent = status;
+        if ((order.status || "Pendiente") === status) option.selected = true;
+        select.appendChild(option);
+      });
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "btn-sec";
+      save.style.marginTop = "8px";
+      save.textContent = "Guardar estado";
+      save.addEventListener("click", function(){
+        if (!isAdmin) return;
+        db.collection("orders").doc(doc.id).update({status:select.value}).then(function(){
+          details.textContent = "Estado: " + select.value + " · Total: " + (Number(order.total) || 0).toFixed(2) + " €";
+          setMessage("publishMsg", "Estado del pedido actualizado.", true);
+        }).catch(function(error){
+          setMessage("publishMsg", "No se pudo actualizar el pedido: " + error.message, false);
+        });
+      });
+      row.append(heading, details, select, save);
+      list.appendChild(row);
+    });
+  }, function(error){
+    list.textContent = "No se pudieron leer pedidos. Si todavía no has configurado la colección orders o sus reglas, esta sección no estará disponible.";
+    console.warn("Pedidos no disponibles:", error.message);
+  });
 }
 
 function setMessage(id, message, success){
@@ -403,6 +544,7 @@ function updateAccountUI(){
   $("guest").classList.toggle("hidden", isAdmin);
   $("adminPanel").classList.toggle("hidden", !isAdmin);
   drawProducts();
+  drawAdminProducts();
 }
 
 function addProduct(){
@@ -487,6 +629,7 @@ function startFirebase(){
       }
     });
     startProductsListener();
+    startOrdersListener();
   }catch(error){
     firebaseReady = false;
     auth = null;
